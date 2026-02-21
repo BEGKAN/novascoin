@@ -1,27 +1,64 @@
 window.profile = {
+    // Обновление цвета ника (предпросмотр бесплатно)
     updateNameColor() {
         const color = document.getElementById('colorSlider').value;
         document.getElementById('profileName').style.color = `hsl(${color}, 80%, 70%)`;
     },
     
-    async changeNickname() {
+    // Сохранить цвет (платно)
+    async saveColor() {
         const user = window.app.user;
-        const newNick = prompt('Новый ник:', user.nickname);
+        const color = document.getElementById('colorSlider').value;
         
-        if (newNick && newNick.trim()) {
-            const updated = await DB.users.update(user.tg_id, {
-                nickname: newNick.trim()
+        if (user.balance < 1000) {
+            window.app.showNotification('❌ Недостаточно средств! Нужно 1000 NC');
+            return;
+        }
+        
+        if (confirm(`Сменить цвет ника за 1000 NC?`)) {
+            user.balance -= 1000;
+            user.color = parseInt(color);
+            
+            await DB.users.update(user.tg_id, {
+                balance: user.balance,
+                color: user.color
             });
             
-            if (updated) {
-                user.nickname = newNick.trim();
-                document.getElementById('profileName').textContent = newNick.trim();
-                document.getElementById('usernameDisplay').textContent = newNick.trim();
-                window.app.showNotification('✅ Ник изменён');
-            }
+            document.getElementById('profileName').style.color = `hsl(${user.color}, 80%, 70%)`;
+            window.app.updateUI();
+            window.app.showNotification('✅ Цвет изменён!');
         }
     },
     
+    // Сменить ник (платно)
+    async changeNickname() {
+        const user = window.app.user;
+        const newNick = prompt('Введите новый ник (1000 NC):', user.nickname);
+        
+        if (!newNick || newNick.trim() === '') return;
+        
+        if (user.balance < 1000) {
+            window.app.showNotification('❌ Недостаточно средств! Нужно 1000 NC');
+            return;
+        }
+        
+        user.balance -= 1000;
+        user.nickname = newNick.trim();
+        
+        const updated = await DB.users.update(user.tg_id, {
+            balance: user.balance,
+            nickname: user.nickname
+        });
+        
+        if (updated) {
+            document.getElementById('profileName').textContent = user.nickname;
+            document.getElementById('usernameDisplay').textContent = user.nickname;
+            window.app.updateUI();
+            window.app.showNotification('✅ Ник изменён!');
+        }
+    },
+    
+    // Показать/скрыть промокоды
     togglePromo() {
         const promo = document.getElementById('promoSection');
         promo.style.display = promo.style.display === 'none' ? 'block' : 'none';
