@@ -1,141 +1,164 @@
-// Конфигурация Supabase - ЗАМЕНИТЕ НА СВОИ КЛЮЧИ
-const SUPABASE_URL = 'https://ehfuuoussodqrwqoiugp.supabase.co';
-const SUPABASE_KEY = 'sb_secret__EK5Ll9V131mFlsPYDc1Sg_kpDwTCJr'; // ВАШ КЛЮЧ
+// НОВЫЙ ФАЙЛ supabase.js - без конфликтов!
 
-// Создаем подключение к Supabase
+// Конфигурация Supabase - ВСТАВЬТЕ СВОИ КЛЮЧИ
+const SUPABASE_URL = 'https://ehfuuoussodqrwqoiugp.supabase.co';
+const SUPABASE_KEY = 'sb_secret__EK5Ll9V131mFlsPYDc1Sg_kpDwTCJr'; // ВАШ НАСТОЯЩИЙ КЛЮЧ!
+
+// Создаем клиент с другим именем, чтобы не было конфликтов
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
 // Глобальный объект для базы данных
-window.db = {
+window.database = {
     users: {
+        // Получить пользователя
         async get(tgId) {
-            const { data, error } = await supabaseClient
-                .from('users')
-                .select('*')
-                .eq('tg_id', tgId)
-                .maybeSingle();
-            
-            if (error) {
-                console.error('Error getting user:', error);
+            try {
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('*')
+                    .eq('tg_id', tgId)
+                    .maybeSingle();
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Ошибка получения пользователя:', error);
                 return null;
             }
-            return data;
         },
         
+        // Создать пользователя
         async create(userData) {
-            const { data, error } = await supabaseClient
-                .from('users')
-                .insert([userData])
-                .select()
-                .single();
-            
-            if (error) {
-                console.error('Error creating user:', error);
+            try {
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .insert([userData])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Ошибка создания пользователя:', error);
                 return null;
             }
-            return data;
         },
         
+        // Обновить пользователя
         async update(tgId, updates) {
-            const { data, error } = await supabaseClient
-                .from('users')
-                .update(updates)
-                .eq('tg_id', tgId)
-                .select()
-                .single();
-            
-            if (error) {
-                console.error('Error updating user:', error);
+            try {
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .update(updates)
+                    .eq('tg_id', tgId)
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Ошибка обновления пользователя:', error);
                 return null;
             }
-            return data;
         },
         
+        // Получить рейтинг
         async getRating(limit = 20) {
-            const { data, error } = await supabaseClient
-                .from('users')
-                .select('nickname, balance')
-                .order('balance', { ascending: false })
-                .limit(limit);
-            
-            if (error) {
-                console.error('Error getting rating:', error);
+            try {
+                const { data, error } = await supabaseClient
+                    .from('users')
+                    .select('nickname, balance')
+                    .order('balance', { ascending: false })
+                    .limit(limit);
+                
+                if (error) throw error;
+                return data || [];
+            } catch (error) {
+                console.error('Ошибка получения рейтинга:', error);
                 return [];
             }
-            return data || [];
         }
     },
     
     promocodes: {
         async get(code) {
-            const { data, error } = await supabaseClient
-                .from('promocodes')
-                .select('*')
-                .eq('code', code)
-                .maybeSingle();
-            
-            if (error) return null;
-            return data;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('promocodes')
+                    .select('*')
+                    .eq('code', code)
+                    .maybeSingle();
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Ошибка получения промокода:', error);
+                return null;
+            }
         },
         
         async create(promoData) {
-            const { data, error } = await supabaseClient
-                .from('promocodes')
-                .insert([promoData])
-                .select()
-                .single();
-            
-            if (error) return null;
-            return data;
-        },
-        
-        async use(id) {
-            const { data, error } = await supabaseClient
-                .from('promocodes')
-                .update({ uses_left: supabaseClient.rpc('decrement', { x: 1 }) })
-                .eq('id', id)
-                .select()
-                .single();
-            
-            if (error) return null;
-            return data;
+            try {
+                const { data, error } = await supabaseClient
+                    .from('promocodes')
+                    .insert([promoData])
+                    .select()
+                    .single();
+                
+                if (error) throw error;
+                return data;
+            } catch (error) {
+                console.error('Ошибка создания промокода:', error);
+                return null;
+            }
         }
     },
     
     lottery: {
         async placeBet(betData) {
-            const { data, error } = await supabaseClient
-                .from('lottery_bets')
-                .insert([betData])
-                .select();
-            
-            if (error) {
-                console.error('Error placing bet:', error);
+            try {
+                const { error } = await supabaseClient
+                    .from('lottery_bets')
+                    .insert([betData]);
+                
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error('Ошибка ставки:', error);
                 return false;
             }
-            return true;
         },
         
         async getBets(lotteryType) {
-            const { data, error } = await supabaseClient
-                .from('lottery_bets')
-                .select('*')
-                .eq('lottery_type', lotteryType);
-            
-            if (error) return [];
-            return data || [];
+            try {
+                const { data, error } = await supabaseClient
+                    .from('lottery_bets')
+                    .select('*')
+                    .eq('lottery_type', lotteryType);
+                
+                if (error) throw error;
+                return data || [];
+            } catch (error) {
+                console.error('Ошибка получения ставок:', error);
+                return [];
+            }
         },
         
         async clearBets(lotteryType) {
-            const { error } = await supabaseClient
-                .from('lottery_bets')
-                .delete()
-                .eq('lottery_type', lotteryType);
-            
-            if (error) return false;
-            return true;
+            try {
+                const { error } = await supabaseClient
+                    .from('lottery_bets')
+                    .delete()
+                    .eq('lottery_type', lotteryType);
+                
+                if (error) throw error;
+                return true;
+            } catch (error) {
+                console.error('Ошибка очистки ставок:', error);
+                return false;
+            }
         }
     }
 };
 
-console.log('✅ Supabase подключен');
+console.log('✅ База данных подключена');
