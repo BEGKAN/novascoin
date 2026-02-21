@@ -5,14 +5,45 @@ const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZ
 // Создаем клиент
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Защита от взлома через консоль
-Object.freeze(window.DB);
+// Защита от взлома - удаляем все глобальные методы, которые могут быть использованы для взлома
+delete window.supabase;
+delete window.supabaseClient;
 
-// Глобальный объект для работы с БД
-window.DB = {
-    users: {
+// Создаем защищенный контекст
+(function() {
+    // Приватные переменные
+    let _userCache = new Map();
+    
+    // Глобальный объект только для чтения
+    window.DB = {};
+    
+    // Функция для валидации суммы
+    function validateAmount(amount) {
+        if (typeof amount !== 'number' || isNaN(amount) || amount <= 0) {
+            throw new Error('Неверная сумма');
+        }
+        return Math.round(amount * 1000) / 1000; // Округляем до 3 знаков
+    }
+    
+    // Функция для валидации ID
+    function validateTgId(tgId) {
+        if (!tgId || typeof tgId !== 'number') {
+            throw new Error('Неверный ID пользователя');
+        }
+        return tgId;
+    }
+    
+    // Users API
+    window.DB.users = {
         async get(tgId) {
             try {
+                tgId = validateTgId(tgId);
+                
+                // Проверяем кэш
+                if (_userCache.has(tgId)) {
+                    return _userCache.get(tgId);
+                }
+                
                 const { data, error } = await supabaseClient
                     .from('users')
                     .select('*')
@@ -20,6 +51,11 @@ window.DB = {
                     .maybeSingle();
                 
                 if (error) throw error;
+                
+                if (data) {
+                    _userCache.set(tgId, data);
+                }
+                
                 return data;
             } catch (error) {
                 console.error('Ошибка получения пользователя:', error);
@@ -29,7 +65,6 @@ window.DB = {
         
         async create(userData) {
             try {
-                // Валидация данных
                 if (!userData.tg_id || !userData.name) {
                     throw new Error('Недостаточно данных');
                 }
@@ -41,6 +76,11 @@ window.DB = {
                     .single();
                 
                 if (error) throw error;
+                
+                if (data) {
+                    _userCache.set(data.tg_id, data);
+                }
+                
                 return data;
             } catch (error) {
                 console.error('Ошибка создания пользователя:', error);
@@ -50,25 +90,35 @@ window.DB = {
         
         async update(tgId, updates) {
             try {
-                // Запрещаем прямое изменение баланса через консоль
-                // Все изменения баланса должны проходить через серверные функции
-                const allowedUpdates = ['nickname', 'color', 'last_online'];
+                tgId = validateTgId(tgId);
                 
-                // Проверяем, что обновляются только разрешенные поля
-                for (let key in updates) {
-                    if (!allowedUpdates.includes(key) && key !== 'balance') {
-                        throw new Error('Нельзя обновлять это поле');
+                // Разрешаем только определенные поля
+                const allowedUpdates = ['nickname', 'color'];
+                const filteredUpdates = {};
+                
+                for (let key of allowedUpdates) {
+                    if (updates[key] !== undefined) {
+                        filteredUpdates[key] = updates[key];
                     }
+                }
+                
+                if (Object.keys(filteredUpdates).length === 0) {
+                    return null;
                 }
                 
                 const { data, error } = await supabaseClient
                     .from('users')
-                    .update(updates)
+                    .update(filteredUpdates)
                     .eq('tg_id', tgId)
                     .select()
                     .single();
                 
                 if (error) throw error;
+                
+                if (data) {
+                    _userCache.set(tgId, data);
+                }
+                
                 return data;
             } catch (error) {
                 console.error('Ошибка обновления пользователя:', error);
@@ -76,39 +126,48 @@ window.DB = {
             }
         },
         
-        // Специальный метод для обновления баланса (только через игровые действия)
-        async updateBalance(tgId, amount, operation) {
+        async addBalance(tgId, amount) {
             try {
-                // Получаем текущего пользователя
-                const user = await this.get(tgId);
-                if (!user) throw new Error('Пользователь не найден');
+                tgId = validateTgId(tgId);
+                amount = validateAmount(amount);
                 
-                let newBalance;
-                if (operation === 'add') {
-                    newBalance = (user.balance || 0) + amount;
-                } else if (operation === 'subtract') {
-                    newBalance = (user.balance || 0) - amount;
-                } else {
-                    throw new Error('Неверная операция');
-                }
-                
-                // Защита от отрицательного баланса
-                if (newBalance < 0) {
-                    throw new Error('Недостаточно средств');
-                }
-                
+                // Используем RPC для атомарного обновления
                 const { data, error } = await supabaseClient
-                    .from('users')
-                    .update({ balance: newBalance })
-                    .eq('tg_id', tgId)
-                    .eq('balance', user.balance) // Проверяем, что баланс не изменился с момента чтения
-                    .select()
-                    .single();
+                    .rpc('add_balance', {
+                        user_tg_id: tgId,
+                        add_amount: amount
+                    });
                 
                 if (error) throw error;
-                return data;
+                
+                // Обновляем кэш
+                const user = await this.get(tgId);
+                return user;
             } catch (error) {
-                console.error('Ошибка обновления баланса:', error);
+                console.error('Ошибка добавления баланса:', error);
+                return null;
+            }
+        },
+        
+        async subtractBalance(tgId, amount) {
+            try {
+                tgId = validateTgId(tgId);
+                amount = validateAmount(amount);
+                
+                // Используем RPC для атомарного обновления
+                const { data, error } = await supabaseClient
+                    .rpc('subtract_balance', {
+                        user_tg_id: tgId,
+                        subtract_amount: amount
+                    });
+                
+                if (error) throw error;
+                
+                // Обновляем кэш
+                const user = await this.get(tgId);
+                return user;
+            } catch (error) {
+                console.error('Ошибка списания баланса:', error);
                 return null;
             }
         },
@@ -128,11 +187,16 @@ window.DB = {
                 return [];
             }
         }
-    },
+    };
     
-    promocodes: {
+    // Promocodes API
+    window.DB.promocodes = {
         async get(code) {
             try {
+                if (!code || typeof code !== 'string') {
+                    throw new Error('Неверный код');
+                }
+                
                 const { data, error } = await supabaseClient
                     .from('promocodes')
                     .select('*')
@@ -149,6 +213,10 @@ window.DB = {
         
         async create(promoData) {
             try {
+                if (!promoData.code || !promoData.amount || !promoData.uses_left) {
+                    throw new Error('Недостаточно данных');
+                }
+                
                 const { data, error } = await supabaseClient
                     .from('promocodes')
                     .insert([promoData])
@@ -165,12 +233,14 @@ window.DB = {
         
         async use(id) {
             try {
+                if (!id || typeof id !== 'number') {
+                    throw new Error('Неверный ID');
+                }
+                
                 const { data, error } = await supabaseClient
-                    .from('promocodes')
-                    .update({ uses_left: supabaseClient.rpc('decrement') })
-                    .eq('id', id)
-                    .select()
-                    .single();
+                    .rpc('use_promocode', {
+                        promo_id: id
+                    });
                 
                 if (error) throw error;
                 return data;
@@ -179,15 +249,17 @@ window.DB = {
                 return null;
             }
         }
-    },
+    };
     
-    lottery: {
+    // Lottery API
+    window.DB.lottery = {
         async placeBet(betData) {
             try {
-                // Проверяем, что ставка положительная
-                if (betData.amount <= 0) {
-                    throw new Error('Ставка должна быть положительной');
+                if (!betData.user_id || !betData.lottery_type || !betData.amount) {
+                    throw new Error('Недостаточно данных');
                 }
+                
+                betData.amount = validateAmount(betData.amount);
                 
                 const { error } = await supabaseClient
                     .from('lottery_bets')
@@ -203,6 +275,10 @@ window.DB = {
         
         async getBets(lotteryType) {
             try {
+                if (!lotteryType || typeof lotteryType !== 'string') {
+                    throw new Error('Неверный тип лотереи');
+                }
+                
                 const { data, error } = await supabaseClient
                     .from('lottery_bets')
                     .select('*')
@@ -218,6 +294,10 @@ window.DB = {
         
         async clearBets(lotteryType) {
             try {
+                if (!lotteryType || typeof lotteryType !== 'string') {
+                    throw new Error('Неверный тип лотереи');
+                }
+                
                 const { error } = await supabaseClient
                     .from('lottery_bets')
                     .delete()
@@ -230,10 +310,13 @@ window.DB = {
                 return false;
             }
         }
-    }
-};
-
-// Замораживаем объект, чтобы нельзя было изменить методы
-Object.freeze(window.DB);
+    };
+    
+    // Замораживаем объект
+    Object.freeze(window.DB);
+    Object.freeze(window.DB.users);
+    Object.freeze(window.DB.promocodes);
+    Object.freeze(window.DB.lottery);
+})();
 
 console.log('✅ База данных подключена');
