@@ -22,8 +22,12 @@ window.games = {
     
     init() {
         this.showGameMenu();
-        this.loadCircleBets();
-        this.loadEagleBets();
+        this.loadAllBets();
+    },
+    
+    async loadAllBets() {
+        await this.loadCircleBets();
+        await this.loadEagleBets();
     },
     
     showGameMenu() {
@@ -40,11 +44,11 @@ window.games = {
         if (gameType === 'circle') {
             document.getElementById('circleGame').style.display = 'block';
             document.getElementById('eagleGame').style.display = 'none';
-            this.startCircle();
+            this.startCircleTimer();
         } else {
             document.getElementById('circleGame').style.display = 'none';
             document.getElementById('eagleGame').style.display = 'block';
-            this.startEagle();
+            this.startEagleTimer();
         }
     },
     
@@ -53,9 +57,9 @@ window.games = {
         this.showGameMenu();
     },
     
-    startCircle() {
+    // КРУГОВАЯ ЛОТЕРЕЯ
+    startCircleTimer() {
         if (this.circle.interval) clearInterval(this.circle.interval);
-        this.loadCircleBets();
         
         this.circle.interval = setInterval(() => {
             if (this.circle.timer > 0) {
@@ -139,8 +143,15 @@ window.games = {
             return;
         }
         
-        user.balance -= amount;
-        await DB.users.update(user.tg_id, { balance: user.balance });
+        // Списываем баланс через защищенный метод
+        const updated = await DB.users.updateBalance(user.tg_id, amount, 'subtract');
+        
+        if (!updated) {
+            window.app.showNotification('Ошибка списания средств');
+            return;
+        }
+        
+        user.balance = updated.balance;
         
         const placed = await DB.lottery.placeBet({
             user_id: user.tg_id,
@@ -161,11 +172,9 @@ window.games = {
             window.app.updateUI();
             window.app.showNotification('✅ Ставка принята!');
             document.getElementById('circleBetAmount').value = '1';
-        } else {
-            user.balance += amount;
-            await DB.users.update(user.tg_id, { balance: user.balance });
-            window.app.updateUI();
-            window.app.showNotification('❌ Ошибка ставки');
+            
+            // Перезагружаем ставки
+            await this.loadCircleBets();
         }
     },
     
@@ -176,15 +185,11 @@ window.games = {
         const winAmount = this.circle.pool;
         
         try {
-            const winnerData = await DB.users.get(winner.userId);
-            if (winnerData) {
-                await DB.users.update(winner.userId, {
-                    balance: (winnerData.balance || 0) + winAmount
-                });
-                
-                if (winner.userId === window.app.user?.tg_id) {
-                    window.app.showNotification(`🎉 Вы выиграли ${winAmount.toFixed(3)} NC!`);
-                }
+            // Начисляем выигрыш победителю
+            await DB.users.updateBalance(winner.userId, winAmount, 'add');
+            
+            if (winner.userId === window.app.user?.tg_id) {
+                window.app.showNotification(`🎉 Вы выиграли ${winAmount.toFixed(3)} NC!`);
             }
             
             await DB.lottery.clearBets('circle');
@@ -206,9 +211,9 @@ window.games = {
         this.updateCircleProgress();
     },
     
-    startEagle() {
+    // ОРЁЛ/РЕШКА
+    startEagleTimer() {
         if (this.eagle.interval) clearInterval(this.eagle.interval);
-        this.loadEagleBets();
         
         this.eagle.interval = setInterval(() => {
             if (this.eagle.timer > 0) {
@@ -284,8 +289,15 @@ window.games = {
             return;
         }
         
-        user.balance -= amount;
-        await DB.users.update(user.tg_id, { balance: user.balance });
+        // Списываем баланс через защищенный метод
+        const updated = await DB.users.updateBalance(user.tg_id, amount, 'subtract');
+        
+        if (!updated) {
+            window.app.showNotification('Ошибка списания средств');
+            return;
+        }
+        
+        user.balance = updated.balance;
         
         const placed = await DB.lottery.placeBet({
             user_id: user.tg_id,
@@ -317,11 +329,9 @@ window.games = {
             window.app.updateUI();
             window.app.showNotification('✅ Ставка сделана!');
             document.getElementById('eagleBetAmount').value = '10';
-        } else {
-            user.balance += amount;
-            await DB.users.update(user.tg_id, { balance: user.balance });
-            window.app.updateUI();
-            window.app.showNotification('❌ Ошибка ставки');
+            
+            // Перезагружаем ставки
+            await this.loadEagleBets();
         }
     },
     
@@ -336,16 +346,11 @@ window.games = {
         
         try {
             for (const bet of winningBets) {
-                const userData = await DB.users.get(bet.userId);
-                if (userData) {
-                    const winAmount = (bet.amount / winningPool) * totalPool;
-                    await DB.users.update(bet.userId, {
-                        balance: (userData.balance || 0) + winAmount
-                    });
-                    
-                    if (bet.userId === window.app.user?.tg_id) {
-                        window.app.showNotification(`🎉 Вы выиграли +${winAmount.toFixed(3)} NC!`);
-                    }
+                const winAmount = (bet.amount / winningPool) * totalPool;
+                await DB.users.updateBalance(bet.userId, winAmount, 'add');
+                
+                if (bet.userId === window.app.user?.tg_id) {
+                    window.app.showNotification(`🎉 Вы выиграли +${winAmount.toFixed(3)} NC!`);
                 }
             }
             
