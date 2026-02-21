@@ -9,7 +9,7 @@ window.app = {
             this.tg = window.Telegram?.WebApp;
             if (this.tg) {
                 this.tg.ready();
-                this.tg.expand(); // На весь экран
+                this.tg.expand();
             }
             
             const tgUser = this.tg?.initDataUnsafe?.user;
@@ -20,10 +20,25 @@ window.app = {
             await this.loadUser(userId, userName, userUsername);
             this.startPassiveIncome();
             
+            // Добавляем онлайн статистику
+            this.addOnlineStats();
+            
             console.log('✅ Приложение запущено');
         } catch (error) {
             console.error('Ошибка:', error);
             this.showNotification('Ошибка загрузки');
+        }
+    },
+    
+    addOnlineStats() {
+        // Добавляем элемент онлайн статистики под баланс
+        const balanceCard = document.querySelector('.balance-card');
+        if (balanceCard) {
+            const onlineDiv = document.createElement('div');
+            onlineDiv.className = 'online-stats';
+            onlineDiv.id = 'onlineStats';
+            onlineDiv.textContent = 'Online: 0';
+            balanceCard.appendChild(onlineDiv);
         }
     },
     
@@ -43,8 +58,7 @@ window.app = {
                     sec_power: 0,
                     color: 260,
                     total_earned: 0,
-                    daily_earned: 0,
-                    last_online: new Date()
+                    daily_earned: 0
                 });
             }
             
@@ -70,10 +84,9 @@ window.app = {
     async clickCoin() {
         if (!this.user) return;
         
-        const updated = await DB.users.updateBalance(
+        const updated = await DB.users.addBalance(
             this.user.tg_id, 
-            this.user.click_power, 
-            'add'
+            this.user.click_power
         );
         
         if (updated) {
@@ -87,10 +100,9 @@ window.app = {
     startPassiveIncome() {
         setInterval(async () => {
             if (this.user && this.user.sec_power > 0) {
-                const updated = await DB.users.updateBalance(
+                const updated = await DB.users.addBalance(
                     this.user.tg_id, 
-                    this.user.sec_power, 
-                    'add'
+                    this.user.sec_power
                 );
                 
                 if (updated) {
