@@ -24,20 +24,23 @@ window.profile = {
             return;
         }
         
-        user.balance -= 100;
+        // Списываем баланс через защищенный метод
+        const updated = await DB.users.updateBalance(user.tg_id, 100, 'subtract');
+        
+        if (!updated) {
+            window.app.showNotification('Ошибка покупки');
+            return;
+        }
+        
+        user.balance = updated.balance;
         user.color = parseInt(color);
         
-        const updated = await DB.users.update(user.tg_id, {
-            balance: user.balance,
-            color: user.color
-        });
+        await DB.users.update(user.tg_id, { color: user.color });
         
-        if (updated) {
-            document.getElementById('profileName').style.color = `hsl(${user.color}, 80%, 70%)`;
-            window.app.updateUI();
-            this.closeColorModal();
-            window.app.showNotification('✅ Цвет изменён!');
-        }
+        document.getElementById('profileName').style.color = `hsl(${user.color}, 80%, 70%)`;
+        window.app.updateUI();
+        this.closeColorModal();
+        window.app.showNotification('✅ Цвет изменён!');
     },
     
     async changeNickname() {
@@ -51,20 +54,23 @@ window.profile = {
             return;
         }
         
-        user.balance -= 100;
+        // Списываем баланс через защищенный метод
+        const updated = await DB.users.updateBalance(user.tg_id, 100, 'subtract');
+        
+        if (!updated) {
+            window.app.showNotification('Ошибка покупки');
+            return;
+        }
+        
+        user.balance = updated.balance;
         user.nickname = newNick.trim();
         
-        const updated = await DB.users.update(user.tg_id, {
-            balance: user.balance,
-            nickname: user.nickname
-        });
+        await DB.users.update(user.tg_id, { nickname: user.nickname });
         
-        if (updated) {
-            document.getElementById('profileName').textContent = user.nickname;
-            document.getElementById('usernameDisplay').textContent = user.nickname;
-            window.app.updateUI();
-            window.app.showNotification('✅ Ник изменён!');
-        }
+        document.getElementById('profileName').textContent = user.nickname;
+        document.getElementById('usernameDisplay').textContent = user.nickname;
+        window.app.updateUI();
+        window.app.showNotification('✅ Ник изменён!');
     },
     
     togglePromo() {
@@ -73,66 +79,4 @@ window.profile = {
     },
     
     showPromo(type) {
-        document.getElementById('promoActivate').style.display = type === 'activate' ? 'block' : 'none';
-        document.getElementById('promoCreate').style.display = type === 'create' ? 'block' : 'none';
-        
-        document.querySelectorAll('.promo-tab').forEach((tab, i) => {
-            tab.classList.toggle('active', (i === 0 && type === 'activate') || (i === 1 && type === 'create'));
-        });
-    },
-    
-    async activatePromo() {
-        const code = document.getElementById('promoCode').value;
-        if (!code) {
-            window.app.showNotification('Введите код');
-            return;
-        }
-        
-        const promo = await DB.promocodes.get(code);
-        if (!promo || promo.uses_left <= 0) {
-            window.app.showNotification('❌ Промокод не найден');
-            return;
-        }
-        
-        const user = window.app.user;
-        user.balance += promo.amount;
-        
-        const updated = await DB.users.update(user.tg_id, { balance: user.balance });
-        
-        if (updated) {
-            await DB.promocodes.use(promo.id);
-            window.app.updateUI();
-            window.app.showNotification(`✅ +${promo.amount} NC`);
-            document.getElementById('promoCode').value = '';
-        }
-    },
-    
-    async createPromo() {
-        const name = document.getElementById('newPromoName').value;
-        const sum = parseFloat(document.getElementById('promoSum').value);
-        const uses = parseInt(document.getElementById('promoUses').value);
-        
-        if (!name || isNaN(sum) || sum <= 0 || isNaN(uses) || uses <= 0) {
-            window.app.showNotification('Заполните все поля');
-            return;
-        }
-        
-        const promoData = {
-            code: name,
-            amount: sum,
-            uses_left: uses,
-            creator_id: window.app.user.tg_id
-        };
-        
-        const promo = await DB.promocodes.create(promoData);
-        
-        if (promo) {
-            window.app.showNotification('✅ Промокод создан');
-            document.getElementById('newPromoName').value = '';
-            document.getElementById('promoSum').value = '';
-            document.getElementById('promoUses').value = '';
-        } else {
-            window.app.showNotification('❌ Ошибка создания промокода');
-        }
-    }
-};
+        document.getElementById('promoActivate').style.display
