@@ -181,24 +181,27 @@
         Промокоды
     </button>
     
-    <div id="promoSection" class="promo-section" style="display: none;">
-        <div class="promo-tabs">
-            <button class="promo-tab active" onclick="window.profile.showPromo('activate')">Активировать</button>
-            <button class="promo-tab" onclick="window.profile.showPromo('create')">Создать</button>
+   <div id="promoSection" class="promo-section" style="display: none;">
+    <div class="promo-tabs">
+        <button class="promo-tab active" onclick="window.profile.showPromo('activate')">Активировать</button>
+        <button class="promo-tab" onclick="window.profile.showPromo('create')">Создать</button>
+    </div>
+    
+    <div id="promoActivate">
+        <div class="promo-input-group">
+            <input type="text" id="promoCode" placeholder="Введите промокод">
+            <button class="promo-apply-btn" onclick="window.profile.activatePromo()">→</button>
         </div>
-        
-        <div id="promoActivate">
-            <div class="promo-input-group">
-                <input type="text" id="promoCode" placeholder="Введите промокод">
-                <button class="promo-apply-btn" onclick="window.profile.activatePromo()">→</button>
-            </div>
+    </div>
+    
+    <div id="promoCreate" style="display: none;">
+        <div class="promo-input-group">
+            <input type="text" id="newPromoName" placeholder="Название">
+            <button class="promo-apply-btn" onclick="window.profile.createPromo()">✓</button>
         </div>
-        
-        <div id="promoCreate" style="display: none;">
-            <input type="text" id="newPromoName" placeholder="Название промокода">
+        <div class="promo-input-row">
             <input type="number" id="promoSum" placeholder="Сумма" step="0.001">
-            <input type="number" id="promoUses" placeholder="Количество активаций">
-            <button class="profile-action-btn" onclick="window.profile.createPromo()">Создать</button>
+            <input type="number" id="promoUses" placeholder="Активаций">
         </div>
     </div>
 </div>
