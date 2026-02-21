@@ -20,14 +20,12 @@ window.games = {
         interval: null
     },
     
-    // Инициализация
     init() {
         this.showGameMenu();
         this.loadCircleBets();
         this.loadEagleBets();
     },
     
-    // Показать меню выбора игр
     showGameMenu() {
         this.currentGame = null;
         document.getElementById('gameMenu').style.display = 'block';
@@ -35,7 +33,6 @@ window.games = {
         document.getElementById('eagleGame').style.display = 'none';
     },
     
-    // Выбрать игру
     selectGame(gameType) {
         this.currentGame = gameType;
         document.getElementById('gameMenu').style.display = 'none';
@@ -51,13 +48,11 @@ window.games = {
         }
     },
     
-    // Вернуться в меню игр
     backToMenu() {
         this.currentGame = null;
         this.showGameMenu();
     },
     
-    // КРУГОВАЯ ЛОТЕРЕЯ
     startCircle() {
         if (this.circle.interval) clearInterval(this.circle.interval);
         this.loadCircleBets();
@@ -144,11 +139,9 @@ window.games = {
             return;
         }
         
-        // Списываем баланс
         user.balance -= amount;
         await DB.users.update(user.tg_id, { balance: user.balance });
         
-        // Сохраняем ставку
         const placed = await DB.lottery.placeBet({
             user_id: user.tg_id,
             lottery_type: 'circle',
@@ -169,7 +162,6 @@ window.games = {
             window.app.showNotification('✅ Ставка принята!');
             document.getElementById('circleBetAmount').value = '1';
         } else {
-            // Возвращаем баланс если ошибка
             user.balance += amount;
             await DB.users.update(user.tg_id, { balance: user.balance });
             window.app.updateUI();
@@ -214,7 +206,6 @@ window.games = {
         this.updateCircleProgress();
     },
     
-    // ОРЁЛ/РЕШКА
     startEagle() {
         if (this.eagle.interval) clearInterval(this.eagle.interval);
         this.loadEagleBets();
@@ -293,11 +284,9 @@ window.games = {
             return;
         }
         
-        // Списываем баланс
         user.balance -= amount;
         await DB.users.update(user.tg_id, { balance: user.balance });
         
-        // Сохраняем ставку
         const placed = await DB.lottery.placeBet({
             user_id: user.tg_id,
             lottery_type: 'eagle',
@@ -329,7 +318,6 @@ window.games = {
             window.app.showNotification('✅ Ставка сделана!');
             document.getElementById('eagleBetAmount').value = '10';
         } else {
-            // Возвращаем баланс если ошибка
             user.balance += amount;
             await DB.users.update(user.tg_id, { balance: user.balance });
             window.app.updateUI();
