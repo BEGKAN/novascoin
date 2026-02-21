@@ -55,173 +55,160 @@
             <div id="shopList" class="shop-list"></div>
         </div>
 
-       <!-- Игры -->
-<div id="gamesPanel" class="panel">
-    <h2 class="panel-title">Игры</h2>
-    
-    <!-- Меню выбора игры -->
-    <div id="gameMenu" class="game-menu">
-        <div class="game-card" onclick="window.games.selectGame('circle')">
-            <div class="game-card-content">
-                <div class="game-card-icon">🎰</div>
-                <div class="game-card-title">Круговая лотерея</div>
-                <div class="game-card-desc">Один победитель забирает всё!</div>
-                <button class="game-card-btn">Зайти</button>
+        <!-- Игры -->
+        <div id="gamesPanel" class="panel">
+            <h2 class="panel-title">Игры</h2>
+            
+            <!-- Меню выбора игры -->
+            <div id="gameMenu" class="game-menu">
+                <div class="game-card" onclick="window.games.selectGame('circle')">
+                    <div class="game-card-content">
+                        <div class="game-card-icon">🎰</div>
+                        <div class="game-card-title">Круговая лотерея</div>
+                        <div class="game-card-desc">Один победитель забирает всё!</div>
+                        <button class="game-card-btn">Зайти</button>
+                    </div>
+                </div>
+                
+                <div class="game-card" onclick="window.games.selectGame('eagle')">
+                    <div class="game-card-content">
+                        <div class="game-card-icon">🦅</div>
+                        <div class="game-card-title">Орёл vs Решка</div>
+                        <div class="game-card-desc">Выбери команду и выигрывай!</div>
+                        <button class="game-card-btn">Зайти</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Круговая лотерея -->
+            <div id="circleGame" class="game-container" style="display: none;">
+                <div class="game-header">
+                    <button class="back-btn" onclick="window.games.backToMenu()">←</button>
+                    <h3 class="game-title">Круговая лотерея</h3>
+                </div>
+                
+                <div class="lottery-circle-container">
+                    <div class="lottery-circle" id="lotteryCircle">
+                        <div class="timer-text" id="circleTimer">0</div>
+                    </div>
+                </div>
+                
+                <div class="game-stats">
+                    <div class="stat-item">
+                        <span class="stat-label">Банк</span>
+                        <span class="stat-value" id="circlePool">0.000</span>
+                    </div>
+                    <div class="stat-item">
+                        <span class="stat-label">Игроков</span>
+                        <span class="stat-value" id="circlePlayers">0</span>
+                    </div>
+                </div>
+                
+                <div class="bet-section">
+                    <input type="number" id="circleBetAmount" class="bet-input" placeholder="Сумма ставки" value="1" min="0.001" step="0.001">
+                    <button class="bet-btn" onclick="window.games.placeCircleBet()">Сделать ставку</button>
+                </div>
+            </div>
+            
+            <!-- Орёл/Решка -->
+            <div id="eagleGame" class="game-container" style="display: none;">
+                <div class="game-header">
+                    <button class="back-btn" onclick="window.games.backToMenu()">←</button>
+                    <h3 class="game-title">Орёл vs Решка</h3>
+                </div>
+                
+                <div class="teams-container">
+                    <div class="team-card" id="teamEagle" onclick="window.games.selectTeam('eagle')">
+                        <div class="team-coin">N</div>
+                        <div class="team-name">Орёл</div>
+                        <div class="team-pool" id="eaglePool">0.000</div>
+                    </div>
+                    <div class="team-card" id="teamRevard" onclick="window.games.selectTeam('revard')">
+                        <div class="team-coin">NC</div>
+                        <div class="team-name">Решка</div>
+                        <div class="team-pool" id="revardPool">0.000</div>
+                    </div>
+                </div>
+                
+                <div class="selected-team" id="selectedTeam">Выберите команду</div>
+                
+                <div class="bet-section">
+                    <input type="number" id="eagleBetAmount" class="bet-input" placeholder="Сумма ставки" value="10" min="0.001" step="0.001">
+                    <button class="bet-btn" onclick="window.games.placeEagleBet()">Сделать ставку</button>
+                </div>
+                
+                <div class="game-footer">
+                    <div class="game-timer">⏳ <span id="eagleTimer">0</span> сек</div>
+                    <div class="game-players">👥 <span id="eaglePlayers">0</span></div>
+                </div>
             </div>
         </div>
-        
-        <div class="game-card" onclick="window.games.selectGame('eagle')">
-            <div class="game-card-content">
-                <div class="game-card-icon">🦅</div>
-                <div class="game-card-title">Орёл vs Решка</div>
-                <div class="game-card-desc">Выбери команду и выигрывай!</div>
-                <button class="game-card-btn">Зайти</button>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Круговая лотерея -->
-    <div id="circleGame" class="game-container" style="display: none;">
-        <div class="game-header">
-            <button class="back-btn" onclick="window.games.backToMenu()">←</button>
-            <h3 class="game-title">Круговая лотерея</h3>
-        </div>
-        
-        <div class="lottery-circle-container">
-            <div class="lottery-circle" id="lotteryCircle">
-                <div class="timer-text" id="circleTimer">0</div>
-            </div>
-        </div>
-        
-        <div class="game-stats">
-            <div class="stat-item">
-                <span class="stat-label">Банк</span>
-                <span class="stat-value" id="circlePool">0.000</span>
-            </div>
-            <div class="stat-item">
-                <span class="stat-label">Игроков</span>
-                <span class="stat-value" id="circlePlayers">0</span>
-            </div>
-        </div>
-        
-        <div class="bet-section">
-            <input type="number" id="circleBetAmount" class="bet-input" placeholder="Сумма ставки" value="1" min="0.001" step="0.001">
-            <button class="bet-btn" onclick="window.games.placeCircleBet()">Сделать ставку</button>
-        </div>
-    </div>
-    
-    <!-- Орёл/Решка -->
-    <div id="eagleGame" class="game-container" style="display: none;">
-        <div class="game-header">
-            <button class="back-btn" onclick="window.games.backToMenu()">←</button>
-            <h3 class="game-title">Орёл vs Решка</h3>
-        </div>
-        
-        <div class="teams-container">
-            <div class="team-card" id="teamEagle" onclick="window.games.selectTeam('eagle')">
-                <div class="team-coin">N</div>
-                <div class="team-name">Орёл</div>
-                <div class="team-pool" id="eaglePool">0.000</div>
-            </div>
-            <div class="team-card" id="teamRevard" onclick="window.games.selectTeam('revard')">
-                <div class="team-coin">NC</div>
-                <div class="team-name">Решка</div>
-                <div class="team-pool" id="revardPool">0.000</div>
-            </div>
-        </div>
-        
-        <div class="selected-team" id="selectedTeam">Выберите команду</div>
-        
-        <div class="bet-section">
-            <input type="number" id="eagleBetAmount" class="bet-input" placeholder="Сумма ставки" value="10" min="0.001" step="0.001">
-            <button class="bet-btn" onclick="window.games.placeEagleBet()">Сделать ставку</button>
-        </div>
-        
-        <div class="game-footer">
-            <div class="game-timer">⏳ <span id="eagleTimer">0</span> сек</div>
-            <div class="game-players">👥 <span id="eaglePlayers">0</span></div>
-        </div>
-    </div>
-</div>
+
         <!-- Рейтинг -->
         <div id="ratingPanel" class="panel">
             <h2 class="panel-title">Рейтинг игроков</h2>
             <div id="ratingList" class="rating-list"></div>
         </div>
 
-       <!-- Профиль -->
-<div id="profilePanel" class="panel">
-    <div class="profile-header">
-        <div class="profile-avatar" id="avatar">👤</div>
-        <div class="profile-name" id="profileName">Загрузка...</div>
-        <div class="profile-id">ID: user_177</div>
-    </div>
-    
-    <div class="stats-grid">
-        <div class="stat-box">
-            <div class="stat-label">За день</div>
-            <div class="stat-value" id="dayEarn">0.000</div>
+        <!-- Профиль -->
+        <div id="profilePanel" class="panel">
+            <div class="profile-header">
+                <div class="profile-avatar" id="avatar">👤</div>
+                <div class="profile-name" id="profileName">Загрузка...</div>
+                <div class="profile-id" id="userId">ID: загрузка...</div>
+            </div>
+            
+            <div class="stats-grid">
+                <div class="stat-box">
+                    <div class="stat-label">За день</div>
+                    <div class="stat-value" id="dayEarn">0.000</div>
+                </div>
+                <div class="stat-box">
+                    <div class="stat-label">За всё</div>
+                    <div class="stat-value" id="totalEarn">0.000</div>
+                </div>
+            </div>
+            
+            <div class="profile-actions">
+                <button class="profile-action-btn half" onclick="window.profile.changeNickname()">
+                    Сменить ник
+                </button>
+                <button class="profile-action-btn half" onclick="window.profile.showColorModal()">
+                    Цвет (100 NC)
+                </button>
+            </div>
+            
+            <button class="profile-action-btn promo-btn" onclick="window.profile.togglePromo()">
+                Промокоды
+            </button>
+            
+            <div id="promoSection" class="promo-section" style="display: none;">
+                <div class="promo-tabs">
+                    <button class="promo-tab active" onclick="window.profile.showPromo('activate')">Активировать</button>
+                    <button class="promo-tab" onclick="window.profile.showPromo('create')">Создать</button>
+                </div>
+                
+                <div id="promoActivate">
+                    <div class="promo-input-group">
+                        <input type="text" id="promoCode" placeholder="Введите промокод">
+                        <button class="promo-apply-btn" onclick="window.profile.activatePromo()">→</button>
+                    </div>
+                </div>
+                
+                <div id="promoCreate" style="display: none;">
+                    <div class="promo-input-group">
+                        <input type="text" id="newPromoName" placeholder="Название промокода">
+                        <button class="promo-apply-btn" onclick="window.profile.createPromo()">✓</button>
+                    </div>
+                    <div class="promo-input-row">
+                        <input type="number" id="promoSum" placeholder="Сумма" step="0.001">
+                        <input type="number" id="promoUses" placeholder="Кол-во активаций">
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="stat-box">
-            <div class="stat-label">За всё</div>
-            <div class="stat-value" id="totalEarn">0.000</div>
-        </div>
-    </div>
-    
-    <div class="profile-actions">
-        <button class="profile-action-btn half" onclick="window.profile.changeNickname()">
-            Сменить ник
-        </button>
-        <button class="profile-action-btn half" onclick="window.profile.showColorModal()">
-            Цвет (100 NC)
-        </button>
-    </div>
-    
-    <button class="profile-action-btn promo-btn" onclick="window.profile.togglePromo()">
-        Промокоды
-    </button>
-    
-   <div id="promoSection" class="promo-section" style="display: none;">
-    <div class="promo-tabs">
-        <button class="promo-tab active" onclick="window.profile.showPromo('activate')">Активировать</button>
-        <button class="promo-tab" onclick="window.profile.showPromo('create')">Создать</button>
-    </div>
-    
-    <div id="promoActivate">
-        <div class="promo-input-group">
-            <input type="text" id="promoCode" placeholder="Введите промокод">
-            <button class="promo-apply-btn" onclick="window.profile.activatePromo()">→</button>
-        </div>
-    </div>
-    
-    <div id="promoCreate" style="display: none;">
-        <div class="promo-input-group">
-            <input type="text" id="newPromoName" placeholder="Название">
-            <button class="promo-apply-btn" onclick="window.profile.createPromo()">✓</button>
-        </div>
-        <div class="promo-input-row">
-            <input type="number" id="promoSum" placeholder="Сумма" step="0.001">
-            <input type="number" id="promoUses" placeholder="Активаций">
-        </div>
-    </div>
-</div>
 
-<!-- Модальное окно выбора цвета -->
-<div id="colorModal" class="modal" style="display: none;">
-    <div class="modal-content">
-        <h3 class="modal-title">Выбери цвет (100 NC)</h3>
-        
-        <div class="color-preview" id="colorPreview">Предпросмотр</div>
-        
-        <input type="range" min="0" max="360" value="260" id="colorPicker" class="color-picker" oninput="window.profile.previewColor()">
-        
-        <div class="modal-actions">
-            <button class="modal-btn buy" onclick="window.profile.buyColor()">Купить и применить</button>
-            <button class="modal-btn cancel" onclick="window.profile.closeColorModal()">Отмена</button>
-        </div>
-    </div>
-</div>
-        <!-- Нижняя навигация -->
+        <!-- НИЖНЯЯ НАВИГАЦИЯ (5 КНОПОК) -->
         <nav class="bottom-nav">
             <button class="nav-item active" onclick="window.app.switchPanel('mainPanel')">
                 <div class="nav-icon icon-home"></div>
@@ -255,7 +242,23 @@
     <!-- Уведомления -->
     <div id="notification" class="notification"></div>
 
-    <!-- Подключаем JavaScript модули в правильном порядке -->
+    <!-- Модальное окно выбора цвета -->
+    <div id="colorModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <h3 class="modal-title">Выбери цвет (100 NC)</h3>
+            
+            <div class="color-preview" id="colorPreview">Предпросмотр</div>
+            
+            <input type="range" min="0" max="360" value="260" id="colorPicker" class="color-picker" oninput="window.profile.previewColor()">
+            
+            <div class="modal-actions">
+                <button class="modal-btn buy" onclick="window.profile.buyColor()">Купить и применить</button>
+                <button class="modal-btn cancel" onclick="window.profile.closeColorModal()">Отмена</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Подключаем JavaScript модули -->
     <script src="js/supabase.js"></script>
     <script src="js/app.js"></script>
     <script src="js/shop.js"></script>
