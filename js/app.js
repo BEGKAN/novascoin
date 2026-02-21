@@ -59,6 +59,7 @@ window.app = {
             document.getElementById('usernameDisplay').textContent = this.user.nickname;
             document.getElementById('profileName').textContent = this.user.nickname;
             document.getElementById('profileName').style.color = `hsl(${this.user.color}, 80%, 70%)`;
+            document.getElementById('userId').textContent = `ID: user_${this.user.tg_id.toString().slice(-4)}`;
             
             this.updateUI();
             
@@ -81,6 +82,7 @@ window.app = {
             
             document.getElementById('usernameDisplay').textContent = this.user.nickname;
             document.getElementById('profileName').textContent = this.user.nickname;
+            document.getElementById('userId').textContent = `ID: user_${this.user.tg_id.toString().slice(-4)}`;
             this.updateUI();
         }
     },
@@ -204,7 +206,7 @@ window.app = {
             list.innerHTML = users.map((u, i) => `
                 <div class="rating-item">
                     <span class="rating-pos">${i+1}</span>
-                    <span class="rating-name">${u.nickname || 'Игрок'}</span>
+                    <span class="rating-name" style="color: hsl(${u.color || 260}, 80%, 70%)">${u.nickname || 'Игрок'}</span>
                     <span class="rating-balance">${(u.balance || 0).toFixed(3)}</span>
                 </div>
             `).join('');
