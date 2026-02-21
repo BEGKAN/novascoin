@@ -6,8 +6,8 @@ window.games = {
         timer: 0,
         pool: 0,
         players: 0,
-        bets: [], // Ставки всех игроков
-        playerBets: new Map(), // Общая сумма ставок каждого игрока
+        bets: [],
+        playerTotals: {}, // Общая сумма каждого игрока
         interval: null,
         colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9']
     },
@@ -18,7 +18,7 @@ window.games = {
         revardPool: 0,
         players: 0,
         bets: [],
-        playerBets: new Map(),
+        playerTotals: {},
         interval: null
     },
     
@@ -30,6 +30,7 @@ window.games = {
     async loadAllBets() {
         await this.loadCircleBets();
         await this.loadEagleBets();
+        this.updateOnlineStats();
     },
     
     showGameMenu() {
@@ -82,16 +83,15 @@ window.games = {
             if (bets && bets.length > 0) {
                 this.circle.bets = bets;
                 
-                // Группируем ставки по игрокам
-                this.circle.playerBets.clear();
+                // Считаем общую сумму каждого игрока
+                this.circle.playerTotals = {};
                 bets.forEach(bet => {
                     const userId = bet.user_id;
-                    const currentAmount = this.circle.playerBets.get(userId) || 0;
-                    this.circle.playerBets.set(userId, currentAmount + bet.amount);
+                    this.circle.playerTotals[userId] = (this.circle.playerTotals[userId] || 0) + bet.amount;
                 });
                 
                 this.circle.pool = bets.reduce((s, b) => s + (b.amount || 0), 0);
-                this.circle.players = this.circle.playerBets.size; // Количество уникальных игроков
+                this.circle.players = Object.keys(this.circle.playerTotals).length;
                 
                 if (this.circle.timer === 0 && this.circle.players > 0) {
                     this.circle.timer = 120;
@@ -108,12 +108,12 @@ window.games = {
         const circle = document.getElementById('lotteryCircle');
         if (!circle) return;
         
-        if (this.circle.playerBets.size === 0) {
+        if (this.circle.players === 0) {
             circle.style.background = '#1b1029';
             return;
         }
         
-        if (this.circle.playerBets.size === 1) {
+        if (this.circle.players === 1) {
             circle.style.background = this.circle.colors[0];
             return;
         }
@@ -123,8 +123,9 @@ window.games = {
         let index = 0;
         
         // Проходим по уникальным игрокам
-        for (let [userId, totalAmount] of this.circle.playerBets) {
-            const percent = (totalAmount / this.circle.pool) * 100;
+        for (let userId in this.circle.playerTotals) {
+            const amount = this.circle.playerTotals[userId];
+            const percent = (amount / this.circle.pool) * 100;
             const color = this.circle.colors[index % this.circle.colors.length];
             const end = start + (percent * 3.6);
             gradient += `${color} ${start}deg ${end}deg, `;
@@ -154,16 +155,11 @@ window.games = {
             return;
         }
         
-        // Списываем баланс через защищенный метод
-        const updated = await DB.users.subtractBalance(user.tg_id, amount);
+        // Списываем баланс
+        user.balance -= amount;
+        await DB.users.update(user.tg_id, { balance: user.balance });
         
-        if (!updated) {
-            window.app.showNotification('Ошибка списания средств');
-            return;
-        }
-        
-        user.balance = updated.balance;
-        
+        // Сохраняем ставку
         const placed = await DB.lottery.placeBet({
             user_id: user.tg_id,
             lottery_type: 'circle',
@@ -174,12 +170,11 @@ window.games = {
             // Добавляем ставку
             this.circle.bets.push({ user_id: user.tg_id, amount });
             
-            // Обновляем сумму ставок игрока
-            const currentAmount = this.circle.playerBets.get(user.tg_id) || 0;
-            this.circle.playerBets.set(user.tg_id, currentAmount + amount);
+            // Обновляем общую сумму игрока
+            this.circle.playerTotals[user.tg_id] = (this.circle.playerTotals[user.tg_id] || 0) + amount;
             
             this.circle.pool += amount;
-            this.circle.players = this.circle.playerBets.size; // Количество уникальных игроков
+            this.circle.players = Object.keys(this.circle.playerTotals).length;
             
             if (this.circle.timer === 0) {
                 this.circle.timer = 120;
@@ -190,7 +185,6 @@ window.games = {
             window.app.showNotification('✅ Ставка принята!');
             document.getElementById('circleBetAmount').value = '1';
             
-            // Добавляем строку с онлайн статистикой
             this.updateOnlineStats();
         }
     },
@@ -199,16 +193,21 @@ window.games = {
         if (this.circle.bets.length === 0) return;
         
         // Выбираем случайного игрока из уникальных
-        const players = Array.from(this.circle.playerBets.keys());
-        const winnerId = players[Math.floor(Math.random() * players.length)];
+        const players = Object.keys(this.circle.playerTotals);
+        const winnerId = parseInt(players[Math.floor(Math.random() * players.length)]);
         const winAmount = this.circle.pool;
         
         try {
-            // Начисляем выигрыш победителю
-            await DB.users.addBalance(winnerId, winAmount);
-            
-            if (winnerId === window.app.user?.tg_id) {
-                window.app.showNotification(`🎉 Вы выиграли ${winAmount.toFixed(3)} NC!`);
+            // Получаем данные победителя
+            const winnerData = await DB.users.get(winnerId);
+            if (winnerData) {
+                await DB.users.update(winnerId, {
+                    balance: (winnerData.balance || 0) + winAmount
+                });
+                
+                if (winnerId === window.app.user?.tg_id) {
+                    window.app.showNotification(`🎉 Вы выиграли ${winAmount.toFixed(3)} NC!`);
+                }
             }
             
             await DB.lottery.clearBets('circle');
@@ -217,7 +216,7 @@ window.games = {
         }
         
         this.circle.bets = [];
-        this.circle.playerBets.clear();
+        this.circle.playerTotals = {};
         this.circle.pool = 0;
         this.circle.players = 0;
         this.circle.timer = 0;
@@ -253,26 +252,22 @@ window.games = {
             if (bets && bets.length > 0) {
                 this.eagle.bets = bets;
                 
-                // Группируем по командам и игрокам
-                this.eagle.playerBets.clear();
-                let eagleTotal = 0;
-                let revardTotal = 0;
+                // Сбрасываем пулы
+                this.eagle.eaglePool = 0;
+                this.eagle.revardPool = 0;
+                this.eagle.playerTotals = {};
                 
                 bets.forEach(bet => {
                     const userId = bet.user_id;
                     const key = `${bet.team}_${userId}`;
-                    const currentAmount = this.eagle.playerBets.get(key) || 0;
-                    this.eagle.playerBets.set(key, currentAmount + bet.amount);
+                    this.eagle.playerTotals[key] = (this.eagle.playerTotals[key] || 0) + bet.amount;
                     
                     if (bet.team === 'eagle') {
-                        eagleTotal += bet.amount;
+                        this.eagle.eaglePool += bet.amount;
                     } else {
-                        revardTotal += bet.amount;
+                        this.eagle.revardPool += bet.amount;
                     }
                 });
-                
-                this.eagle.eaglePool = eagleTotal;
-                this.eagle.revardPool = revardTotal;
                 
                 // Уникальные игроки
                 const uniquePlayers = new Set(bets.map(b => b.user_id));
@@ -320,15 +315,9 @@ window.games = {
             return;
         }
         
-        // Списываем баланс через защищенный метод
-        const updated = await DB.users.subtractBalance(user.tg_id, amount);
-        
-        if (!updated) {
-            window.app.showNotification('Ошибка списания средств');
-            return;
-        }
-        
-        user.balance = updated.balance;
+        // Списываем баланс
+        user.balance -= amount;
+        await DB.users.update(user.tg_id, { balance: user.balance });
         
         const placed = await DB.lottery.placeBet({
             user_id: user.tg_id,
@@ -364,7 +353,6 @@ window.games = {
             window.app.showNotification('✅ Ставка сделана!');
             document.getElementById('eagleBetAmount').value = '10';
             
-            // Обновляем онлайн статистику
             this.updateOnlineStats();
         }
     },
@@ -380,11 +368,16 @@ window.games = {
         
         try {
             for (const bet of winningBets) {
-                const winAmount = (bet.amount / winningPool) * totalPool;
-                await DB.users.addBalance(bet.user_id, winAmount);
-                
-                if (bet.user_id === window.app.user?.tg_id) {
-                    window.app.showNotification(`🎉 Вы выиграли +${winAmount.toFixed(3)} NC!`);
+                const userData = await DB.users.get(bet.user_id);
+                if (userData) {
+                    const winAmount = (bet.amount / winningPool) * totalPool;
+                    await DB.users.update(bet.user_id, {
+                        balance: (userData.balance || 0) + winAmount
+                    });
+                    
+                    if (bet.user_id === window.app.user?.tg_id) {
+                        window.app.showNotification(`🎉 Вы выиграли +${winAmount.toFixed(3)} NC!`);
+                    }
                 }
             }
             
@@ -394,7 +387,7 @@ window.games = {
         }
         
         this.eagle.bets = [];
-        this.eagle.playerBets.clear();
+        this.eagle.playerTotals = {};
         this.eagle.eaglePool = 0;
         this.eagle.revardPool = 0;
         this.eagle.players = 0;
@@ -414,12 +407,9 @@ window.games = {
         document.getElementById('eagleTimer').textContent = this.eagle.timer || 0;
     },
     
-    // Обновление статистики онлайн
+    // Обновление онлайн статистики
     updateOnlineStats() {
-        const onlineElement = document.getElementById('onlineStats');
-        if (onlineElement) {
-            const totalPlayers = this.circle.players + this.eagle.players;
-            onlineElement.textContent = `Online: ${totalPlayers}`;
-        }
+        const totalPlayers = this.circle.players + this.eagle.players;
+        window.app.updateOnlineStats(totalPlayers);
     }
 };
