@@ -55,77 +55,94 @@
             <div id="shopList" class="shop-list"></div>
         </div>
 
-        <!-- Игры -->
-        <div id="gamesPanel" class="panel">
-            <h2 class="panel-title">Игры</h2>
-            
-            <!-- Меню выбора игры -->
-            <div id="gameMenu" class="game-menu">
-                <div class="game-card" onclick="window.games.selectGame('circle')">
-                    <div class="game-card-icon">🎰</div>
-                    <div class="game-card-title">Круговая лотерея</div>
-                    <div class="game-card-desc">Один победитель забирает всё!</div>
-                    <button class="game-card-btn">Зайти</button>
-                </div>
-                
-                <div class="game-card" onclick="window.games.selectGame('eagle')">
-                    <div class="game-card-icon">🦅</div>
-                    <div class="game-card-title">Орёл vs Решка</div>
-                    <div class="game-card-desc">Выбери команду и выигрывай!</div>
-                    <button class="game-card-btn">Зайти</button>
-                </div>
-            </div>
-            
-            <!-- Круговая лотерея -->
-            <div id="circleGame" class="game-container" style="display: none;">
-                <button class="back-btn" onclick="window.games.backToMenu()">← Назад</button>
-                
-                <div class="lottery-circle-container">
-                    <div class="lottery-circle" id="lotteryCircle">
-                        <div class="timer-text" id="circleTimer">0</div>
-                    </div>
-                </div>
-                <div class="game-stats">
-                    <div class="stat">Банк: <span id="circlePool">0.000</span></div>
-                    <div class="stat">Игроков: <span id="circlePlayers">0</span></div>
-                </div>
-                <div class="bet-panel">
-                    <input type="number" id="circleBetAmount" class="bet-input" placeholder="Сумма ставки" value="1" min="0.001" step="0.001">
-                    <button class="place-bet" onclick="window.games.placeCircleBet()">Сделать ставку</button>
-                </div>
-            </div>
-            
-            <!-- Орёл/Решка -->
-            <div id="eagleGame" class="game-container" style="display: none;">
-                <button class="back-btn" onclick="window.games.backToMenu()">← Назад</button>
-                
-                <div class="teams-container">
-                    <div class="team-card" id="teamEagle" onclick="window.games.selectTeam('eagle')">
-                        <div class="team-coin">N</div>
-                        <div class="team-name">Орёл</div>
-                        <div class="team-pool" id="eaglePool">0.000</div>
-                    </div>
-                    <div class="team-card" id="teamRevard" onclick="window.games.selectTeam('revard')">
-                        <div class="team-coin">NC</div>
-                        <div class="team-name">Решка</div>
-                        <div class="team-pool" id="revardPool">0.000</div>
-                    </div>
-                </div>
-                
-                <div class="selected-team" id="selectedTeam">Выберите команду</div>
-                
-                <div class="bet-panel">
-                    <input type="number" id="eagleBetAmount" class="bet-input" placeholder="Сумма ставки" value="10" min="0.001" step="0.001">
-                    <button class="place-bet" onclick="window.games.placeEagleBet()">Сделать ставку</button>
-                </div>
-                
-                <div class="game-stats">
-                    <div class="stat">Таймер: <span id="eagleTimer">0</span> сек</div>
-                    <div class="stat">Участников: <span id="eaglePlayers">0</span></div>
-                </div>
+       <!-- Игры -->
+<div id="gamesPanel" class="panel">
+    <h2 class="panel-title">Игры</h2>
+    
+    <!-- Меню выбора игры -->
+    <div id="gameMenu" class="game-menu">
+        <div class="game-card" onclick="window.games.selectGame('circle')">
+            <div class="game-card-content">
+                <div class="game-card-icon">🎰</div>
+                <div class="game-card-title">Круговая лотерея</div>
+                <div class="game-card-desc">Один победитель забирает всё!</div>
+                <button class="game-card-btn">Зайти</button>
             </div>
         </div>
-
+        
+        <div class="game-card" onclick="window.games.selectGame('eagle')">
+            <div class="game-card-content">
+                <div class="game-card-icon">🦅</div>
+                <div class="game-card-title">Орёл vs Решка</div>
+                <div class="game-card-desc">Выбери команду и выигрывай!</div>
+                <button class="game-card-btn">Зайти</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Круговая лотерея -->
+    <div id="circleGame" class="game-container" style="display: none;">
+        <div class="game-header">
+            <button class="back-btn" onclick="window.games.backToMenu()">←</button>
+            <h3 class="game-title">Круговая лотерея</h3>
+        </div>
+        
+        <div class="lottery-circle-container">
+            <div class="lottery-circle" id="lotteryCircle">
+                <div class="timer-text" id="circleTimer">0</div>
+            </div>
+        </div>
+        
+        <div class="game-stats">
+            <div class="stat-item">
+                <span class="stat-label">Банк</span>
+                <span class="stat-value" id="circlePool">0.000</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-label">Игроков</span>
+                <span class="stat-value" id="circlePlayers">0</span>
+            </div>
+        </div>
+        
+        <div class="bet-section">
+            <input type="number" id="circleBetAmount" class="bet-input" placeholder="Сумма ставки" value="1" min="0.001" step="0.001">
+            <button class="bet-btn" onclick="window.games.placeCircleBet()">Сделать ставку</button>
+        </div>
+    </div>
+    
+    <!-- Орёл/Решка -->
+    <div id="eagleGame" class="game-container" style="display: none;">
+        <div class="game-header">
+            <button class="back-btn" onclick="window.games.backToMenu()">←</button>
+            <h3 class="game-title">Орёл vs Решка</h3>
+        </div>
+        
+        <div class="teams-container">
+            <div class="team-card" id="teamEagle" onclick="window.games.selectTeam('eagle')">
+                <div class="team-coin">N</div>
+                <div class="team-name">Орёл</div>
+                <div class="team-pool" id="eaglePool">0.000</div>
+            </div>
+            <div class="team-card" id="teamRevard" onclick="window.games.selectTeam('revard')">
+                <div class="team-coin">NC</div>
+                <div class="team-name">Решка</div>
+                <div class="team-pool" id="revardPool">0.000</div>
+            </div>
+        </div>
+        
+        <div class="selected-team" id="selectedTeam">Выберите команду</div>
+        
+        <div class="bet-section">
+            <input type="number" id="eagleBetAmount" class="bet-input" placeholder="Сумма ставки" value="10" min="0.001" step="0.001">
+            <button class="bet-btn" onclick="window.games.placeEagleBet()">Сделать ставку</button>
+        </div>
+        
+        <div class="game-footer">
+            <div class="game-timer">⏳ <span id="eagleTimer">0</span> сек</div>
+            <div class="game-players">👥 <span id="eaglePlayers">0</span></div>
+        </div>
+    </div>
+</div>
         <!-- Рейтинг -->
         <div id="ratingPanel" class="panel">
             <h2 class="panel-title">Рейтинг игроков</h2>
