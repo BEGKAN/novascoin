@@ -1380,3 +1380,121 @@ body {
     border-radius: 20px;
     border: 1px solid #8a63b9;
 }
+
+/* Промокоды */
+.promo-section {
+    margin-top: 20px;
+    background: #1a1027;
+    border-radius: var(--border-radius-md);
+    padding: 16px;
+}
+
+.promo-tabs {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 16px;
+}
+
+.promo-tab {
+    flex: 1;
+    background: #32234a;
+    border: 1px solid #8a63b9;
+    color: white;
+    padding: 10px;
+    border-radius: 30px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: 0.1s;
+}
+
+.promo-tab.active {
+    background: var(--purple);
+}
+
+.promo-input-group {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.promo-input-group input {
+    flex: 1;
+    background: #2f1e41;
+    border: 2px solid #8a63b9;
+    padding: 12px 16px;
+    border-radius: 40px;
+    color: white;
+    font-size: 14px;
+}
+
+.promo-input-row {
+    display: flex;
+    gap: 8px;
+}
+
+.promo-input-row input {
+    flex: 1;
+    background: #2f1e41;
+    border: 2px solid #8a63b9;
+    padding: 12px 16px;
+    border-radius: 40px;
+    color: white;
+    font-size: 14px;
+}
+
+.promo-apply-btn {
+    width: 46px;
+    height: 46px;
+    background: var(--purple);
+    border: none;
+    border-radius: 50%;
+    color: white;
+    font-size: 20px;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 3px 0 var(--purple-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.promo-apply-btn:active {
+    transform: translateY(3px);
+    box-shadow: none;
+}
+
+/* Рейтинг с цветными именами */
+.rating-item {
+    background: #2e1b44;
+    padding: 10px 14px;
+    border-radius: 30px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: white;
+    font-size: 14px;
+    margin-bottom: 8px;
+}
+
+.rating-pos {
+    background: var(--purple);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+}
+
+.rating-name {
+    flex: 1;
+    font-weight: 500;
+}
+
+.rating-balance {
+    font-weight: 600;
+    color: var(--purple-light);
+}
