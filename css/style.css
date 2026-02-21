@@ -1060,3 +1060,14 @@ html, body {
     font-weight: 600;
     font-size: 14px;
 }
+
+/* Онлайн статистика */
+.online-stats {
+    color: #b380ff;
+    font-size: 13px;
+    text-align: center;
+    margin-top: 8px;
+    opacity: 0.8;
+    font-weight: 500;
+    letter-spacing: 0.5px;
+}
