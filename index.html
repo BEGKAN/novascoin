@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>NovaCoin Clicker</title>
     
     <!-- Подключаем CSS -->
@@ -21,7 +21,7 @@
             <div class="username" id="usernameDisplay">Загрузка...</div>
         </div>
 
-        <!-- Основной экран (Главная) -->
+        <!-- Основной экран -->
         <div id="mainPanel" class="panel active-panel">
             <div class="balance-card">
                 <div class="balance-label">Ваш счёт</div>
@@ -52,9 +52,7 @@
                 <button class="category-btn" onclick="window.shop.showCategory('online')">Онлайн</button>
                 <button class="category-btn" onclick="window.shop.showCategory('offline')">Оффлайн</button>
             </div>
-            <div id="shopList" class="shop-list">
-                <!-- Товары будут загружаться сюда -->
-            </div>
+            <div id="shopList" class="shop-list"></div>
         </div>
 
         <!-- Игры -->
@@ -114,9 +112,7 @@
         <!-- Рейтинг -->
         <div id="ratingPanel" class="panel">
             <h2 class="panel-title">Рейтинг игроков</h2>
-            <div id="ratingList" class="rating-list">
-                <!-- Рейтинг будет загружаться сюда -->
-            </div>
+            <div id="ratingList" class="rating-list"></div>
         </div>
 
         <!-- Профиль -->
@@ -195,7 +191,7 @@
     <!-- Уведомления -->
     <div id="notification" class="notification"></div>
 
-    <!-- Подключаем JavaScript модули -->
+    <!-- Подключаем JavaScript модули в правильном порядке -->
     <script src="js/supabase.js"></script>
     <script src="js/app.js"></script>
     <script src="js/shop.js"></script>
