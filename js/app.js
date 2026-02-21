@@ -31,7 +31,6 @@ window.app = {
     },
     
     addOnlineStats() {
-        // Добавляем элемент онлайн статистики под баланс
         const balanceCard = document.querySelector('.balance-card');
         if (balanceCard) {
             const onlineDiv = document.createElement('div');
@@ -56,9 +55,11 @@ window.app = {
                     balance: 0,
                     click_power: 0.001,
                     sec_power: 0,
+                    offline_power: 0,
                     color: 260,
                     total_earned: 0,
-                    daily_earned: 0
+                    daily_earned: 0,
+                    last_online: new Date()
                 });
             }
             
@@ -84,33 +85,41 @@ window.app = {
     async clickCoin() {
         if (!this.user) return;
         
-        const updated = await DB.users.addBalance(
-            this.user.tg_id, 
-            this.user.click_power
-        );
+        this.user.balance += this.user.click_power;
+        this.user.total_earned += this.user.click_power;
+        this.user.daily_earned += this.user.click_power;
         
-        if (updated) {
-            this.user.balance = updated.balance;
-            this.user.total_earned += this.user.click_power;
-            this.user.daily_earned += this.user.click_power;
-            this.updateUI();
+        try {
+            await DB.users.update(this.user.tg_id, {
+                balance: this.user.balance,
+                total_earned: this.user.total_earned,
+                daily_earned: this.user.daily_earned
+            });
+        } catch (error) {
+            console.error('Ошибка сохранения клика:', error);
         }
+        
+        this.updateUI();
     },
     
     startPassiveIncome() {
         setInterval(async () => {
             if (this.user && this.user.sec_power > 0) {
-                const updated = await DB.users.addBalance(
-                    this.user.tg_id, 
-                    this.user.sec_power
-                );
+                this.user.balance += this.user.sec_power;
+                this.user.total_earned += this.user.sec_power;
+                this.user.daily_earned += this.user.sec_power;
                 
-                if (updated) {
-                    this.user.balance = updated.balance;
-                    this.user.total_earned += this.user.sec_power;
-                    this.user.daily_earned += this.user.sec_power;
-                    this.updateUI();
+                try {
+                    await DB.users.update(this.user.tg_id, {
+                        balance: this.user.balance,
+                        total_earned: this.user.total_earned,
+                        daily_earned: this.user.daily_earned
+                    });
+                } catch (error) {
+                    console.error('Ошибка пассивного дохода:', error);
                 }
+                
+                this.updateUI();
             }
         }, 1000);
     },
@@ -176,10 +185,18 @@ window.app = {
         notif.textContent = msg;
         notif.style.display = 'block';
         setTimeout(() => notif.style.display = 'none', duration);
+    },
+    
+    // Обновление онлайн статистики
+    updateOnlineStats(count) {
+        const onlineEl = document.getElementById('onlineStats');
+        if (onlineEl) {
+            onlineEl.textContent = `Online: ${count}`;
+        }
     }
 };
 
-// Обработчик клика по монете с анимацией
+// Обработчик клика по монете
 document.getElementById('clickCoin').addEventListener('click', function() {
     this.style.transform = 'scale(0.95)';
     setTimeout(() => this.style.transform = 'scale(1)', 100);
