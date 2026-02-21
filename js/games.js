@@ -1,5 +1,5 @@
 window.games = {
-    currentGame: 'circle',
+    currentGame: null,
     selectedTeam: null,
     
     circle: {
@@ -7,6 +7,7 @@ window.games = {
         pool: 0,
         players: 0,
         bets: [],
+        interval: null,
         colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9']
     },
     
@@ -15,30 +16,45 @@ window.games = {
         eaglePool: 0,
         revardPool: 0,
         players: 0,
-        bets: []
+        bets: [],
+        interval: null
     },
     
-    init() {
-        if (this.currentGame === 'circle') this.startCircle();
-        else this.startEagle();
+    // Показать меню выбора игр
+    showGameMenu() {
+        document.getElementById('gameMenu').style.display = 'block';
+        document.getElementById('circleGame').style.display = 'none';
+        document.getElementById('eagleGame').style.display = 'none';
+        document.querySelectorAll('.game-type-btn').forEach(btn => btn.classList.remove('active'));
     },
     
-    showGame(type) {
-        this.currentGame = type;
-        document.getElementById('circleGame').style.display = type === 'circle' ? 'block' : 'none';
-        document.getElementById('eagleGame').style.display = type === 'eagle' ? 'block' : 'none';
+    // Выбрать игру
+    selectGame(gameType) {
+        this.currentGame = gameType;
+        document.getElementById('gameMenu').style.display = 'none';
         
-        document.querySelectorAll('.game-type-btn').forEach((btn, i) => {
-            btn.classList.toggle('active', (i === 0 && type === 'circle') || (i === 1 && type === 'eagle'));
-        });
-        
-        if (type === 'circle') this.startCircle();
-        else this.startEagle();
+        if (gameType === 'circle') {
+            document.getElementById('circleGame').style.display = 'block';
+            document.getElementById('eagleGame').style.display = 'none';
+            this.startCircle();
+        } else {
+            document.getElementById('circleGame').style.display = 'none';
+            document.getElementById('eagleGame').style.display = 'block';
+            this.startEagle();
+        }
+    },
+    
+    // Вернуться в меню игр
+    backToMenu() {
+        this.currentGame = null;
+        this.showGameMenu();
     },
     
     startCircle() {
+        if (this.circle.interval) clearInterval(this.circle.interval);
         this.loadCircleBets();
-        setInterval(() => {
+        
+        this.circle.interval = setInterval(() => {
             if (this.circle.timer > 0) {
                 this.circle.timer--;
                 document.getElementById('circleTimer').textContent = this.circle.timer;
@@ -148,8 +164,10 @@ window.games = {
     },
     
     startEagle() {
+        if (this.eagle.interval) clearInterval(this.eagle.interval);
         this.loadEagleBets();
-        setInterval(() => {
+        
+        this.eagle.interval = setInterval(() => {
             if (this.eagle.timer > 0) {
                 this.eagle.timer--;
                 document.getElementById('eagleTimer').textContent = this.eagle.timer;
@@ -237,7 +255,7 @@ window.games = {
                 });
                 
                 if (bet.userId === window.app.user?.tg_id) {
-                    window.app.showNotification(`🎉 +${winAmount.toFixed(3)}!`);
+                    window.app.showNotification(`🎉 Вы выиграли +${winAmount.toFixed(3)}!`);
                 }
             }
         }
