@@ -4,6 +4,8 @@ window.app = {
     
     async init() {
         try {
+            console.log('Инициализация приложения...');
+            
             this.tg = window.Telegram?.WebApp;
             if (this.tg) {
                 this.tg.ready();
@@ -27,60 +29,88 @@ window.app = {
     },
     
     async loadUser(tgId, name, username) {
-        let userData = await DB.users.get(tgId);
-        
-        if (!userData) {
-            userData = await DB.users.create({
+        try {
+            let userData = await DB.users.get(tgId);
+            
+            if (!userData) {
+                console.log('Создаем нового пользователя...');
+                userData = await DB.users.create({
+                    tg_id: tgId,
+                    name: name,
+                    username: username,
+                    nickname: name,
+                    balance: 0,
+                    click_power: 0.001,
+                    sec_power: 0,
+                    offline_power: 0,
+                    color: 260,
+                    total_earned: 0,
+                    daily_earned: 0,
+                    last_online: new Date()
+                });
+            }
+            
+            if (!userData) {
+                throw new Error('Не удалось создать пользователя');
+            }
+            
+            this.user = userData;
+            
+            document.getElementById('usernameDisplay').textContent = this.user.nickname;
+            document.getElementById('profileName').textContent = this.user.nickname;
+            document.getElementById('profileName').style.color = `hsl(${this.user.color}, 80%, 70%)`;
+            
+            this.updateUI();
+            
+        } catch (error) {
+            console.error('Ошибка загрузки пользователя:', error);
+            this.showNotification('Ошибка загрузки пользователя');
+            
+            // Создаем временного пользователя для теста
+            this.user = {
                 tg_id: tgId,
-                name: name,
-                username: username,
                 nickname: name,
-                balance: 0,
+                balance: 1000,
                 click_power: 0.001,
                 sec_power: 0,
                 offline_power: 0,
                 color: 260,
                 total_earned: 0,
-                daily_earned: 0,
-                last_online: new Date()
-            });
+                daily_earned: 0
+            };
+            this.updateUI();
         }
-        
-        this.user = userData;
-        
-        document.getElementById('usernameDisplay').textContent = this.user.nickname;
-        document.getElementById('profileName').textContent = this.user.nickname;
-        document.getElementById('profileName').style.color = `hsl(${this.user.color}, 80%, 70%)`;
-        document.getElementById('colorSlider').value = this.user.color;
-        
-        this.updateUI();
     },
     
     async calculateOfflineEarnings() {
         if (!this.user) return;
         
-        const lastOnline = new Date(this.user.last_online || Date.now());
-        const now = new Date();
-        const secondsPassed = Math.floor((now - lastOnline) / 1000);
-        const offlineSeconds = Math.min(secondsPassed, 43200);
-        
-        if (offlineSeconds > 0 && this.user.offline_power > 0) {
-            const offlineEarn = offlineSeconds * this.user.offline_power;
-            this.user.balance += offlineEarn;
-            this.user.total_earned += offlineEarn;
+        try {
+            const lastOnline = new Date(this.user.last_online || Date.now());
+            const now = new Date();
+            const secondsPassed = Math.floor((now - lastOnline) / 1000);
+            const offlineSeconds = Math.min(secondsPassed, 43200);
             
-            await DB.users.update(this.user.tg_id, {
-                balance: this.user.balance,
-                total_earned: this.user.total_earned,
-                last_online: now
-            });
-            
-            if (offlineEarn > 0.001) {
-                this.showNotification(`Оффлайн доход: +${offlineEarn.toFixed(3)}`);
+            if (offlineSeconds > 0 && this.user.offline_power > 0) {
+                const offlineEarn = offlineSeconds * this.user.offline_power;
+                this.user.balance += offlineEarn;
+                this.user.total_earned += offlineEarn;
+                
+                await DB.users.update(this.user.tg_id, {
+                    balance: this.user.balance,
+                    total_earned: this.user.total_earned,
+                    last_online: now
+                });
+                
+                if (offlineEarn > 0.001) {
+                    this.showNotification(`✨ Оффлайн доход: +${offlineEarn.toFixed(3)} NC`);
+                }
             }
+            
+            await DB.users.update(this.user.tg_id, { last_online: now });
+        } catch (error) {
+            console.error('Ошибка оффлайн дохода:', error);
         }
-        
-        await DB.users.update(this.user.tg_id, { last_online: now });
     },
     
     async clickCoin() {
@@ -90,11 +120,15 @@ window.app = {
         this.user.total_earned += this.user.click_power;
         this.user.daily_earned += this.user.click_power;
         
-        await DB.users.update(this.user.tg_id, {
-            balance: this.user.balance,
-            total_earned: this.user.total_earned,
-            daily_earned: this.user.daily_earned
-        });
+        try {
+            await DB.users.update(this.user.tg_id, {
+                balance: this.user.balance,
+                total_earned: this.user.total_earned,
+                daily_earned: this.user.daily_earned
+            });
+        } catch (error) {
+            console.error('Ошибка сохранения клика:', error);
+        }
         
         this.updateUI();
     },
@@ -106,11 +140,15 @@ window.app = {
                 this.user.total_earned += this.user.sec_power;
                 this.user.daily_earned += this.user.sec_power;
                 
-                await DB.users.update(this.user.tg_id, {
-                    balance: this.user.balance,
-                    total_earned: this.user.total_earned,
-                    daily_earned: this.user.daily_earned
-                });
+                try {
+                    await DB.users.update(this.user.tg_id, {
+                        balance: this.user.balance,
+                        total_earned: this.user.total_earned,
+                        daily_earned: this.user.daily_earned
+                    });
+                } catch (error) {
+                    console.error('Ошибка пассивного дохода:', error);
+                }
                 
                 this.updateUI();
             }
@@ -120,9 +158,9 @@ window.app = {
     updateUI() {
         if (!this.user) return;
         
-        document.getElementById('balanceDisplay').textContent = this.user.balance.toFixed(3);
-        document.getElementById('secRate').textContent = `+${this.user.sec_power.toFixed(3)} / сек.`;
-        document.getElementById('clickRate').textContent = `+${this.user.click_power.toFixed(3)} / клик`;
+        document.getElementById('balanceDisplay').textContent = (this.user.balance || 0).toFixed(3);
+        document.getElementById('secRate').textContent = `+${(this.user.sec_power || 0).toFixed(3)} / сек.`;
+        document.getElementById('clickRate').textContent = `+${(this.user.click_power || 0.001).toFixed(3)} / клик`;
         document.getElementById('dayEarn').textContent = (this.user.daily_earned || 0).toFixed(3);
         document.getElementById('totalEarn').textContent = (this.user.total_earned || 0).toFixed(3);
     },
@@ -136,27 +174,41 @@ window.app = {
             item.classList.toggle('active', panels[i] === panelId);
         });
         
-        if (panelId === 'shopPanel' && window.shop) window.shop.load();
-        if (panelId === 'ratingPanel') this.loadRating();
-        if (panelId === 'gamesPanel' && window.games) window.games.init();
+        if (panelId === 'shopPanel' && window.shop) {
+            window.shop.load();
+        }
+        if (panelId === 'ratingPanel') {
+            this.loadRating();
+        }
+        if (panelId === 'gamesPanel' && window.games) {
+            window.games.showGameMenu();
+        }
+        if (panelId === 'profilePanel') {
+            document.getElementById('profileName').style.color = `hsl(${this.user?.color || 260}, 80%, 70%)`;
+        }
     },
     
     async loadRating() {
-        const users = await DB.users.getRating(20);
-        const list = document.getElementById('ratingList');
-        
-        if (users.length === 0) {
-            list.innerHTML = '<div class="empty-state">Пока нет игроков</div>';
-            return;
+        try {
+            const users = await DB.users.getRating(20);
+            const list = document.getElementById('ratingList');
+            
+            if (!users || users.length === 0) {
+                list.innerHTML = '<div class="empty-state">Пока нет игроков</div>';
+                return;
+            }
+            
+            list.innerHTML = users.map((u, i) => `
+                <div class="rating-item">
+                    <span class="rating-pos">${i+1}</span>
+                    <span class="rating-name">${u.nickname || 'Игрок'}</span>
+                    <span class="rating-balance">${(u.balance || 0).toFixed(3)}</span>
+                </div>
+            `).join('');
+        } catch (error) {
+            console.error('Ошибка загрузки рейтинга:', error);
+            document.getElementById('ratingList').innerHTML = '<div class="empty-state">Ошибка загрузки</div>';
         }
-        
-        list.innerHTML = users.map((u, i) => `
-            <div class="rating-item">
-                <span class="rating-pos">${i+1}</span>
-                <span>${u.nickname || 'Игрок'}</span>
-                <span style="margin-left:auto;">${u.balance.toFixed(3)}</span>
-            </div>
-        `).join('');
     },
     
     showNotification(msg, duration = 2000) {
@@ -167,10 +219,12 @@ window.app = {
     }
 };
 
+// Обработчик клика по монете
 document.getElementById('clickCoin').addEventListener('click', function() {
     this.style.transform = 'scale(0.95)';
     setTimeout(() => this.style.transform = 'scale(1)', 100);
     window.app.clickCoin();
 });
 
+// Запуск при загрузке страницы
 document.addEventListener('DOMContentLoaded', () => window.app.init());
