@@ -1,5 +1,4 @@
 window.profile = {
-    // Показать модальное окно выбора цвета
     showColorModal() {
         const modal = document.getElementById('colorModal');
         modal.style.display = 'flex';
@@ -7,18 +6,15 @@ window.profile = {
         this.previewColor();
     },
 
-    // Закрыть модальное окно
     closeColorModal() {
         document.getElementById('colorModal').style.display = 'none';
     },
 
-    // Предпросмотр цвета
     previewColor() {
         const color = document.getElementById('colorPicker').value;
         document.getElementById('colorPreview').style.color = `hsl(${color}, 80%, 70%)`;
     },
 
-    // Купить и применить цвет
     async buyColor() {
         const user = window.app.user;
         const color = document.getElementById('colorPicker').value;
@@ -44,7 +40,6 @@ window.profile = {
         }
     },
     
-    // Сменить ник (платно)
     async changeNickname() {
         const user = window.app.user;
         const newNick = prompt('Введите новый ник (100 NC):', user.nickname);
@@ -72,7 +67,6 @@ window.profile = {
         }
     },
     
-    // Показать/скрыть промокоды
     togglePromo() {
         const promo = document.getElementById('promoSection');
         promo.style.display = promo.style.display === 'none' ? 'block' : 'none';
