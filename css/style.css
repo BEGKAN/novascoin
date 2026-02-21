@@ -1002,3 +1002,61 @@ body {
         font-size: 28px;
     }
 }
+
+/* Для полного экрана */
+html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+}
+
+.app-container {
+    min-height: 100vh;
+    border-radius: 0;
+    max-width: 100%;
+    padding: 16px;
+}
+
+@media (min-width: 768px) {
+    .app-container {
+        max-width: 400px;
+        min-height: 650px;
+        border-radius: 32px;
+        margin: 20px auto;
+    }
+}
+
+/* Улучшенные промокоды */
+.promo-input-row {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.promo-input-row input {
+    flex: 1;
+    background: #2f1e41;
+    border: 2px solid #8a63b9;
+    padding: 10px 12px;
+    border-radius: 30px;
+    color: white;
+    font-size: 13px;
+}
+
+.promo-input-row input::placeholder {
+    font-size: 12px;
+}
+
+/* Купленные улучшения */
+.shop-item.disabled {
+    opacity: 0.6;
+}
+
+.shop-item-bought {
+    background: #4a1a8a;
+    padding: 6px 16px;
+    border-radius: 40px;
+    color: #b380ff;
+    font-weight: 600;
+    font-size: 14px;
+}
