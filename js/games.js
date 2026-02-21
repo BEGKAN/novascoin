@@ -171,6 +171,7 @@ window.games = {
         } else {
             // Возвращаем баланс если ошибка
             user.balance += amount;
+            await DB.users.update(user.tg_id, { balance: user.balance });
             window.app.updateUI();
             window.app.showNotification('❌ Ошибка ставки');
         }
@@ -330,6 +331,7 @@ window.games = {
         } else {
             // Возвращаем баланс если ошибка
             user.balance += amount;
+            await DB.users.update(user.tg_id, { balance: user.balance });
             window.app.updateUI();
             window.app.showNotification('❌ Ошибка ставки');
         }
