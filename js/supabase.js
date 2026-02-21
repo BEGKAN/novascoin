@@ -1,6 +1,6 @@
 // Supabase конфигурация - ВСТАВЬТЕ ПРАВИЛЬНЫЕ КЛЮЧИ!
 const SUPABASE_URL = 'https://ehfuuoussodqrwqoiugp.supabase.co';
-const SUPABASE_KEY = 'sb_secret__EK5Ll9V131mFlsPYDc1Sg_kpDwTCJr'; // Вставьте правильный anon key!
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoZnV1b3Vzc29kcXJ3cW9pdWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzE3MDEyNzksImV4cCI6MjA4NzI3NzI3OX0.Ffam9kaK6c1XKuMEzleTpRSEt4GeysCyu7MSaOUXKzs'; // Вставьте правильный anon key!
 
 console.log('Подключение к Supabase:', SUPABASE_URL);
 
