@@ -1,25 +1,33 @@
-// НОВЫЙ ФАЙЛ supabase.js - без конфликтов!
-
-// Конфигурация Supabase - ВСТАВЬТЕ СВОИ КЛЮЧИ
+// Supabase конфигурация - ВСТАВЬТЕ СВОИ КЛЮЧИ!
 const SUPABASE_URL = 'https://ehfuuoussodqrwqoiugp.supabase.co';
-const SUPABASE_KEY = 'sb_secret__EK5Ll9V131mFlsPYDc1Sg_kpDwTCJr'; // ВАШ НАСТОЯЩИЙ КЛЮЧ!
+const SUPABASE_KEY = 'sb_secret__EK5Ll9V131mFlsPYDc1Sg_kpDwTCJr'; // Ваш ключ
 
-// Создаем клиент с другим именем, чтобы не было конфликтов
+// Проверка наличия Supabase
+if (!window.supabase) {
+    console.error('❌ Supabase не загружен!');
+    throw new Error('Supabase not loaded');
+}
+
+// Создаем клиент
 const supabaseClient = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
 
-// Глобальный объект для базы данных
-window.database = {
+// Глобальный объект для работы с БД
+window.DB = {
     users: {
-        // Получить пользователя
         async get(tgId) {
             try {
+                console.log('Запрос пользователя:', tgId);
                 const { data, error } = await supabaseClient
                     .from('users')
                     .select('*')
                     .eq('tg_id', tgId)
                     .maybeSingle();
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('Ошибка запроса:', error);
+                    throw error;
+                }
+                console.log('Получен пользователь:', data);
                 return data;
             } catch (error) {
                 console.error('Ошибка получения пользователя:', error);
@@ -27,16 +35,20 @@ window.database = {
             }
         },
         
-        // Создать пользователя
         async create(userData) {
             try {
+                console.log('Создание пользователя:', userData);
                 const { data, error } = await supabaseClient
                     .from('users')
                     .insert([userData])
                     .select()
                     .single();
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('Ошибка создания:', error);
+                    throw error;
+                }
+                console.log('Создан пользователь:', data);
                 return data;
             } catch (error) {
                 console.error('Ошибка создания пользователя:', error);
@@ -44,9 +56,9 @@ window.database = {
             }
         },
         
-        // Обновить пользователя
         async update(tgId, updates) {
             try {
+                console.log('Обновление пользователя:', tgId, updates);
                 const { data, error } = await supabaseClient
                     .from('users')
                     .update(updates)
@@ -57,12 +69,11 @@ window.database = {
                 if (error) throw error;
                 return data;
             } catch (error) {
-                console.error('Ошибка обновления пользователя:', error);
+                console.error('Ошибка обновления:', error);
                 return null;
             }
         },
         
-        // Получить рейтинг
         async getRating(limit = 20) {
             try {
                 const { data, error } = await supabaseClient
@@ -74,7 +85,7 @@ window.database = {
                 if (error) throw error;
                 return data || [];
             } catch (error) {
-                console.error('Ошибка получения рейтинга:', error);
+                console.error('Ошибка рейтинга:', error);
                 return [];
             }
         }
@@ -92,7 +103,7 @@ window.database = {
                 if (error) throw error;
                 return data;
             } catch (error) {
-                console.error('Ошибка получения промокода:', error);
+                console.error('Ошибка промокода:', error);
                 return null;
             }
         },
@@ -161,4 +172,4 @@ window.database = {
     }
 };
 
-console.log('✅ База данных подключена');
+console.log('✅ База данных подключена', SUPABASE_URL);
