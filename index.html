@@ -58,13 +58,28 @@
         <!-- Игры -->
         <div id="gamesPanel" class="panel">
             <h2 class="panel-title">Игры</h2>
-            <div class="game-selector">
-                <button class="game-type-btn active" onclick="window.games.showGame('circle')">Круговая</button>
-                <button class="game-type-btn" onclick="window.games.showGame('eagle')">Орёл/Решка</button>
+            
+            <!-- Меню выбора игры -->
+            <div id="gameMenu" class="game-menu">
+                <div class="game-card" onclick="window.games.selectGame('circle')">
+                    <div class="game-card-icon">🎰</div>
+                    <div class="game-card-title">Круговая лотерея</div>
+                    <div class="game-card-desc">Один победитель забирает всё!</div>
+                    <button class="game-card-btn">Зайти</button>
+                </div>
+                
+                <div class="game-card" onclick="window.games.selectGame('eagle')">
+                    <div class="game-card-icon">🦅</div>
+                    <div class="game-card-title">Орёл vs Решка</div>
+                    <div class="game-card-desc">Выбери команду и выигрывай!</div>
+                    <button class="game-card-btn">Зайти</button>
+                </div>
             </div>
             
             <!-- Круговая лотерея -->
-            <div id="circleGame" class="game-container">
+            <div id="circleGame" class="game-container" style="display: none;">
+                <button class="back-btn" onclick="window.games.backToMenu()">← Назад</button>
+                
                 <div class="lottery-circle-container">
                     <div class="lottery-circle" id="lotteryCircle">
                         <div class="timer-text" id="circleTimer">0</div>
@@ -82,6 +97,8 @@
             
             <!-- Орёл/Решка -->
             <div id="eagleGame" class="game-container" style="display: none;">
+                <button class="back-btn" onclick="window.games.backToMenu()">← Назад</button>
+                
                 <div class="teams-container">
                     <div class="team-card" id="teamEagle" onclick="window.games.selectTeam('eagle')">
                         <div class="team-coin">N</div>
@@ -135,12 +152,13 @@
             
             <div class="settings-section">
                 <div class="setting-item">
-                    <label>Цвет ника:</label>
+                    <label>Цвет ника (1000 NC):</label>
                     <input type="range" min="0" max="360" value="260" id="colorSlider" oninput="window.profile.updateNameColor()">
+                    <button class="profile-action-btn color-save-btn" onclick="window.profile.saveColor()">Сохранить цвет</button>
                 </div>
                 
-                <button class="profile-btn" onclick="window.profile.changeNickname()">Сменить ник</button>
-                <button class="profile-btn promo-btn" onclick="window.profile.togglePromo()">Промокоды</button>
+                <button class="profile-action-btn" onclick="window.profile.changeNickname()">Сменить ник (1000 NC)</button>
+                <button class="profile-action-btn promo-btn" onclick="window.profile.togglePromo()">Промокоды</button>
                 
                 <div id="promoSection" class="promo-section" style="display: none;">
                     <div class="promo-tabs">
@@ -150,14 +168,14 @@
                     
                     <div id="promoActivate">
                         <input type="text" id="promoCode" placeholder="Введите промокод">
-                        <button class="profile-btn" onclick="window.profile.activatePromo()">Активировать</button>
+                        <button class="profile-action-btn" onclick="window.profile.activatePromo()">Активировать</button>
                     </div>
                     
                     <div id="promoCreate" style="display: none;">
                         <input type="text" id="newPromoName" placeholder="Название промокода">
                         <input type="number" id="promoSum" placeholder="Сумма" step="0.001">
                         <input type="number" id="promoUses" placeholder="Количество активаций">
-                        <button class="profile-btn" onclick="window.profile.createPromo()">Создать</button>
+                        <button class="profile-action-btn" onclick="window.profile.createPromo()">Создать</button>
                     </div>
                 </div>
             </div>
@@ -186,6 +204,12 @@
                 <span class="nav-label">Профиль</span>
             </button>
         </nav>
+
+        <!-- Ссылка на чат -->
+        <a href="https://t.me/offNovaCoinChat" target="_blank" class="chat-link">
+            💬 Наша беседа
+            <span style="display:block; font-size:12px; opacity:0.8;">Пишите баги и предложения</span>
+        </a>
     </div>
 
     <!-- Уведомления -->
