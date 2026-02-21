@@ -3,7 +3,6 @@ window.profile = {
     showColorModal() {
         const modal = document.getElementById('colorModal');
         modal.style.display = 'flex';
-        // Устанавливаем текущий цвет
         document.getElementById('colorPicker').value = window.app.user?.color || 260;
         this.previewColor();
     },
@@ -32,15 +31,17 @@ window.profile = {
         user.balance -= 100;
         user.color = parseInt(color);
         
-        await DB.users.update(user.tg_id, {
+        const updated = await DB.users.update(user.tg_id, {
             balance: user.balance,
             color: user.color
         });
         
-        document.getElementById('profileName').style.color = `hsl(${user.color}, 80%, 70%)`;
-        window.app.updateUI();
-        this.closeColorModal();
-        window.app.showNotification('✅ Цвет изменён!');
+        if (updated) {
+            document.getElementById('profileName').style.color = `hsl(${user.color}, 80%, 70%)`;
+            window.app.updateUI();
+            this.closeColorModal();
+            window.app.showNotification('✅ Цвет изменён!');
+        }
     },
     
     // Сменить ник (платно)
@@ -102,12 +103,14 @@ window.profile = {
         const user = window.app.user;
         user.balance += promo.amount;
         
-        await DB.users.update(user.tg_id, { balance: user.balance });
-        await DB.promocodes.use(promo.id);
+        const updated = await DB.users.update(user.tg_id, { balance: user.balance });
         
-        window.app.updateUI();
-        window.app.showNotification(`✅ +${promo.amount} NC`);
-        document.getElementById('promoCode').value = '';
+        if (updated) {
+            await DB.promocodes.use(promo.id);
+            window.app.updateUI();
+            window.app.showNotification(`✅ +${promo.amount} NC`);
+            document.getElementById('promoCode').value = '';
+        }
     },
     
     async createPromo() {
@@ -120,18 +123,22 @@ window.profile = {
             return;
         }
         
-        const promo = await DB.promocodes.create({
+        const promoData = {
             code: name,
             amount: sum,
             uses_left: uses,
             creator_id: window.app.user.tg_id
-        });
+        };
+        
+        const promo = await DB.promocodes.create(promoData);
         
         if (promo) {
             window.app.showNotification('✅ Промокод создан');
             document.getElementById('newPromoName').value = '';
             document.getElementById('promoSum').value = '';
             document.getElementById('promoUses').value = '';
+        } else {
+            window.app.showNotification('❌ Ошибка создания промокода');
         }
     }
 };
