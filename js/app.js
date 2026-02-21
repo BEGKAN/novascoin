@@ -78,6 +78,9 @@ window.app = {
                 total_earned: 0,
                 daily_earned: 0
             };
+            
+            document.getElementById('usernameDisplay').textContent = this.user.nickname;
+            document.getElementById('profileName').textContent = this.user.nickname;
             this.updateUI();
         }
     },
@@ -89,7 +92,7 @@ window.app = {
             const lastOnline = new Date(this.user.last_online || Date.now());
             const now = new Date();
             const secondsPassed = Math.floor((now - lastOnline) / 1000);
-            const offlineSeconds = Math.min(secondsPassed, 43200);
+            const offlineSeconds = Math.min(secondsPassed, 43200); // Максимум 12 часов
             
             if (offlineSeconds > 0 && this.user.offline_power > 0) {
                 const offlineEarn = offlineSeconds * this.user.offline_power;
@@ -181,7 +184,7 @@ window.app = {
             this.loadRating();
         }
         if (panelId === 'gamesPanel' && window.games) {
-            window.games.showGameMenu();
+            window.games.init();
         }
         if (panelId === 'profilePanel') {
             document.getElementById('profileName').style.color = `hsl(${this.user?.color || 260}, 80%, 70%)`;
@@ -219,7 +222,7 @@ window.app = {
     }
 };
 
-// Обработчик клика по монете
+// Обработчик клика по монете с анимацией
 document.getElementById('clickCoin').addEventListener('click', function() {
     this.style.transform = 'scale(0.95)';
     setTimeout(() => this.style.transform = 'scale(1)', 100);
