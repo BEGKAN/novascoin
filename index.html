@@ -132,55 +132,75 @@
             <div id="ratingList" class="rating-list"></div>
         </div>
 
-        <!-- Профиль -->
-        <div id="profilePanel" class="panel">
-            <div class="profile-header">
-                <div class="profile-avatar" id="avatar">👤</div>
-                <div class="profile-name" id="profileName">Загрузка...</div>
-            </div>
-            
-            <div class="stats-grid">
-                <div class="stat-box">
-                    <div class="stat-label">За день</div>
-                    <div class="stat-value" id="dayEarn">0.000</div>
-                </div>
-                <div class="stat-box">
-                    <div class="stat-label">За всё</div>
-                    <div class="stat-value" id="totalEarn">0.000</div>
-                </div>
-            </div>
-            
-            <div class="settings-section">
-                <div class="setting-item">
-                    <label>Цвет ника (1000 NC):</label>
-                    <input type="range" min="0" max="360" value="260" id="colorSlider" oninput="window.profile.updateNameColor()">
-                    <button class="profile-action-btn color-save-btn" onclick="window.profile.saveColor()">Сохранить цвет</button>
-                </div>
-                
-                <button class="profile-action-btn" onclick="window.profile.changeNickname()">Сменить ник (1000 NC)</button>
-                <button class="profile-action-btn promo-btn" onclick="window.profile.togglePromo()">Промокоды</button>
-                
-                <div id="promoSection" class="promo-section" style="display: none;">
-                    <div class="promo-tabs">
-                        <button class="promo-tab active" onclick="window.profile.showPromo('activate')">Активировать</button>
-                        <button class="promo-tab" onclick="window.profile.showPromo('create')">Создать</button>
-                    </div>
-                    
-                    <div id="promoActivate">
-                        <input type="text" id="promoCode" placeholder="Введите промокод">
-                        <button class="profile-action-btn" onclick="window.profile.activatePromo()">Активировать</button>
-                    </div>
-                    
-                    <div id="promoCreate" style="display: none;">
-                        <input type="text" id="newPromoName" placeholder="Название промокода">
-                        <input type="number" id="promoSum" placeholder="Сумма" step="0.001">
-                        <input type="number" id="promoUses" placeholder="Количество активаций">
-                        <button class="profile-action-btn" onclick="window.profile.createPromo()">Создать</button>
-                    </div>
-                </div>
+       <!-- Профиль -->
+<div id="profilePanel" class="panel">
+    <div class="profile-header">
+        <div class="profile-avatar" id="avatar">👤</div>
+        <div class="profile-name" id="profileName">Загрузка...</div>
+        <div class="profile-id">ID: user_177</div>
+    </div>
+    
+    <div class="stats-grid">
+        <div class="stat-box">
+            <div class="stat-label">За день</div>
+            <div class="stat-value" id="dayEarn">0.000</div>
+        </div>
+        <div class="stat-box">
+            <div class="stat-label">За всё</div>
+            <div class="stat-value" id="totalEarn">0.000</div>
+        </div>
+    </div>
+    
+    <div class="profile-actions">
+        <button class="profile-action-btn half" onclick="window.profile.changeNickname()">
+            Сменить ник
+        </button>
+        <button class="profile-action-btn half" onclick="window.profile.showColorModal()">
+            Цвет (100 NC)
+        </button>
+    </div>
+    
+    <button class="profile-action-btn promo-btn" onclick="window.profile.togglePromo()">
+        Промокоды
+    </button>
+    
+    <div id="promoSection" class="promo-section" style="display: none;">
+        <div class="promo-tabs">
+            <button class="promo-tab active" onclick="window.profile.showPromo('activate')">Активировать</button>
+            <button class="promo-tab" onclick="window.profile.showPromo('create')">Создать</button>
+        </div>
+        
+        <div id="promoActivate">
+            <div class="promo-input-group">
+                <input type="text" id="promoCode" placeholder="Введите промокод">
+                <button class="promo-apply-btn" onclick="window.profile.activatePromo()">→</button>
             </div>
         </div>
+        
+        <div id="promoCreate" style="display: none;">
+            <input type="text" id="newPromoName" placeholder="Название промокода">
+            <input type="number" id="promoSum" placeholder="Сумма" step="0.001">
+            <input type="number" id="promoUses" placeholder="Количество активаций">
+            <button class="profile-action-btn" onclick="window.profile.createPromo()">Создать</button>
+        </div>
+    </div>
+</div>
 
+<!-- Модальное окно выбора цвета -->
+<div id="colorModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <h3 class="modal-title">Выбери цвет (100 NC)</h3>
+        
+        <div class="color-preview" id="colorPreview">Предпросмотр</div>
+        
+        <input type="range" min="0" max="360" value="260" id="colorPicker" class="color-picker" oninput="window.profile.previewColor()">
+        
+        <div class="modal-actions">
+            <button class="modal-btn buy" onclick="window.profile.buyColor()">Купить и применить</button>
+            <button class="modal-btn cancel" onclick="window.profile.closeColorModal()">Отмена</button>
+        </div>
+    </div>
+</div>
         <!-- Нижняя навигация -->
         <nav class="bottom-nav">
             <button class="nav-item active" onclick="window.app.switchPanel('mainPanel')">
