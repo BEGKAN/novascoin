@@ -1,57 +1,77 @@
 window.profile = {
-    updateNameColor() {
-        const color = document.getElementById('colorSlider').value;
-        document.getElementById('profileName').style.color = `hsl(${color}, 80%, 70%)`;
+    // Показать модальное окно выбора цвета
+    showColorModal() {
+        const modal = document.getElementById('colorModal');
+        modal.style.display = 'flex';
+        // Устанавливаем текущий цвет
+        document.getElementById('colorPicker').value = window.app.user?.color || 260;
+        this.previewColor();
     },
-    
-    async saveColor() {
+
+    // Закрыть модальное окно
+    closeColorModal() {
+        document.getElementById('colorModal').style.display = 'none';
+    },
+
+    // Предпросмотр цвета
+    previewColor() {
+        const color = document.getElementById('colorPicker').value;
+        document.getElementById('colorPreview').style.color = `hsl(${color}, 80%, 70%)`;
+    },
+
+    // Купить и применить цвет
+    async buyColor() {
         const user = window.app.user;
-        const color = document.getElementById('colorSlider').value;
+        const color = document.getElementById('colorPicker').value;
         
-        if (user.balance < 1000) {
-            window.app.showNotification('❌ Нужно 1000 NC');
+        if (user.balance < 100) {
+            window.app.showNotification('❌ Недостаточно средств! Нужно 100 NC');
             return;
         }
         
-        if (confirm('Сменить цвет за 1000 NC?')) {
-            user.balance -= 1000;
-            user.color = parseInt(color);
-            
-            await DB.users.update(user.tg_id, {
-                balance: user.balance,
-                color: user.color
-            });
-            
-            window.app.updateUI();
-            window.app.showNotification('✅ Цвет изменён!');
-        }
+        user.balance -= 100;
+        user.color = parseInt(color);
+        
+        await DB.users.update(user.tg_id, {
+            balance: user.balance,
+            color: user.color
+        });
+        
+        document.getElementById('profileName').style.color = `hsl(${user.color}, 80%, 70%)`;
+        window.app.updateUI();
+        this.closeColorModal();
+        window.app.showNotification('✅ Цвет изменён!');
     },
     
+    // Сменить ник (платно)
     async changeNickname() {
         const user = window.app.user;
-        const newNick = prompt('Новый ник (1000 NC):', user.nickname);
+        const newNick = prompt('Введите новый ник (100 NC):', user.nickname);
         
         if (!newNick || newNick.trim() === '') return;
         
-        if (user.balance < 1000) {
-            window.app.showNotification('❌ Нужно 1000 NC');
+        if (user.balance < 100) {
+            window.app.showNotification('❌ Недостаточно средств! Нужно 100 NC');
             return;
         }
         
-        user.balance -= 1000;
+        user.balance -= 100;
         user.nickname = newNick.trim();
         
-        await DB.users.update(user.tg_id, {
+        const updated = await DB.users.update(user.tg_id, {
             balance: user.balance,
             nickname: user.nickname
         });
         
-        document.getElementById('profileName').textContent = user.nickname;
-        document.getElementById('usernameDisplay').textContent = user.nickname;
-        window.app.updateUI();
-        window.app.showNotification('✅ Ник изменён!');
+        if (updated) {
+            document.getElementById('profileName').textContent = user.nickname;
+            document.getElementById('usernameDisplay').textContent = user.nickname;
+            window.app.updateUI();
+            window.app.showNotification('✅ Ник изменён!');
+        }
     },
     
+    // Показать/скрыть промокоды
     togglePromo() {
         const promo = document.getElementById('promoSection');
         promo.style.display = promo.style.display === 'none' ? 'block' : 'none';
