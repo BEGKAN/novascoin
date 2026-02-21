@@ -9,7 +9,7 @@ window.app = {
             this.tg = window.Telegram?.WebApp;
             if (this.tg) {
                 this.tg.ready();
-                this.tg.expand();
+                this.tg.expand(); // На весь экран
             }
             
             const tgUser = this.tg?.initDataUnsafe?.user;
@@ -19,7 +19,6 @@ window.app = {
             
             await this.loadUser(userId, userName, userUsername);
             this.startPassiveIncome();
-            await this.calculateOfflineEarnings();
             
             console.log('✅ Приложение запущено');
         } catch (error) {
@@ -42,7 +41,6 @@ window.app = {
                     balance: 0,
                     click_power: 0.001,
                     sec_power: 0,
-                    offline_power: 0,
                     color: 260,
                     total_earned: 0,
                     daily_earned: 0,
@@ -66,96 +64,41 @@ window.app = {
         } catch (error) {
             console.error('Ошибка загрузки пользователя:', error);
             this.showNotification('Ошибка загрузки пользователя');
-            
-            // Создаем временного пользователя для теста
-            this.user = {
-                tg_id: tgId,
-                nickname: name,
-                balance: 1000,
-                click_power: 0.001,
-                sec_power: 0,
-                offline_power: 0,
-                color: 260,
-                total_earned: 0,
-                daily_earned: 0
-            };
-            
-            document.getElementById('usernameDisplay').textContent = this.user.nickname;
-            document.getElementById('profileName').textContent = this.user.nickname;
-            document.getElementById('userId').textContent = `ID: user_${this.user.tg_id.toString().slice(-4)}`;
-            this.updateUI();
-        }
-    },
-    
-    async calculateOfflineEarnings() {
-        if (!this.user) return;
-        
-        try {
-            const lastOnline = new Date(this.user.last_online || Date.now());
-            const now = new Date();
-            const secondsPassed = Math.floor((now - lastOnline) / 1000);
-            const offlineSeconds = Math.min(secondsPassed, 43200); // Максимум 12 часов
-            
-            if (offlineSeconds > 0 && this.user.offline_power > 0) {
-                const offlineEarn = offlineSeconds * this.user.offline_power;
-                this.user.balance += offlineEarn;
-                this.user.total_earned += offlineEarn;
-                
-                await DB.users.update(this.user.tg_id, {
-                    balance: this.user.balance,
-                    total_earned: this.user.total_earned,
-                    last_online: now
-                });
-                
-                if (offlineEarn > 0.001) {
-                    this.showNotification(`✨ Оффлайн доход: +${offlineEarn.toFixed(3)} NC`);
-                }
-            }
-            
-            await DB.users.update(this.user.tg_id, { last_online: now });
-        } catch (error) {
-            console.error('Ошибка оффлайн дохода:', error);
         }
     },
     
     async clickCoin() {
         if (!this.user) return;
         
-        this.user.balance += this.user.click_power;
-        this.user.total_earned += this.user.click_power;
-        this.user.daily_earned += this.user.click_power;
+        const updated = await DB.users.updateBalance(
+            this.user.tg_id, 
+            this.user.click_power, 
+            'add'
+        );
         
-        try {
-            await DB.users.update(this.user.tg_id, {
-                balance: this.user.balance,
-                total_earned: this.user.total_earned,
-                daily_earned: this.user.daily_earned
-            });
-        } catch (error) {
-            console.error('Ошибка сохранения клика:', error);
+        if (updated) {
+            this.user.balance = updated.balance;
+            this.user.total_earned += this.user.click_power;
+            this.user.daily_earned += this.user.click_power;
+            this.updateUI();
         }
-        
-        this.updateUI();
     },
     
     startPassiveIncome() {
         setInterval(async () => {
             if (this.user && this.user.sec_power > 0) {
-                this.user.balance += this.user.sec_power;
-                this.user.total_earned += this.user.sec_power;
-                this.user.daily_earned += this.user.sec_power;
+                const updated = await DB.users.updateBalance(
+                    this.user.tg_id, 
+                    this.user.sec_power, 
+                    'add'
+                );
                 
-                try {
-                    await DB.users.update(this.user.tg_id, {
-                        balance: this.user.balance,
-                        total_earned: this.user.total_earned,
-                        daily_earned: this.user.daily_earned
-                    });
-                } catch (error) {
-                    console.error('Ошибка пассивного дохода:', error);
+                if (updated) {
+                    this.user.balance = updated.balance;
+                    this.user.total_earned += this.user.sec_power;
+                    this.user.daily_earned += this.user.sec_power;
+                    this.updateUI();
                 }
-                
-                this.updateUI();
             }
         }, 1000);
     },
