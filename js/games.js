@@ -6,7 +6,8 @@ window.games = {
         timer: 0,
         pool: 0,
         players: 0,
-        bets: [],
+        bets: [], // Ставки всех игроков
+        playerBets: new Map(), // Общая сумма ставок каждого игрока
         interval: null,
         colors: ['#ff6b6b', '#4ecdc4', '#45b7d1', '#96ceb4', '#ffeaa7', '#dfe6e9']
     },
@@ -17,6 +18,7 @@ window.games = {
         revardPool: 0,
         players: 0,
         bets: [],
+        playerBets: new Map(),
         interval: null
     },
     
@@ -78,12 +80,18 @@ window.games = {
         try {
             const bets = await DB.lottery.getBets('circle');
             if (bets && bets.length > 0) {
-                this.circle.bets = bets.map(bet => ({
-                    userId: bet.user_id,
-                    amount: bet.amount
-                }));
+                this.circle.bets = bets;
+                
+                // Группируем ставки по игрокам
+                this.circle.playerBets.clear();
+                bets.forEach(bet => {
+                    const userId = bet.user_id;
+                    const currentAmount = this.circle.playerBets.get(userId) || 0;
+                    this.circle.playerBets.set(userId, currentAmount + bet.amount);
+                });
+                
                 this.circle.pool = bets.reduce((s, b) => s + (b.amount || 0), 0);
-                this.circle.players = bets.length;
+                this.circle.players = this.circle.playerBets.size; // Количество уникальных игроков
                 
                 if (this.circle.timer === 0 && this.circle.players > 0) {
                     this.circle.timer = 120;
@@ -100,26 +108,29 @@ window.games = {
         const circle = document.getElementById('lotteryCircle');
         if (!circle) return;
         
-        if (this.circle.bets.length === 0) {
+        if (this.circle.playerBets.size === 0) {
             circle.style.background = '#1b1029';
             return;
         }
         
-        if (this.circle.bets.length === 1) {
+        if (this.circle.playerBets.size === 1) {
             circle.style.background = this.circle.colors[0];
             return;
         }
         
         let gradient = 'conic-gradient(';
         let start = 0;
+        let index = 0;
         
-        this.circle.bets.forEach((bet, i) => {
-            const percent = (bet.amount / this.circle.pool) * 100;
-            const color = this.circle.colors[i % this.circle.colors.length];
+        // Проходим по уникальным игрокам
+        for (let [userId, totalAmount] of this.circle.playerBets) {
+            const percent = (totalAmount / this.circle.pool) * 100;
+            const color = this.circle.colors[index % this.circle.colors.length];
             const end = start + (percent * 3.6);
             gradient += `${color} ${start}deg ${end}deg, `;
             start = end;
-        });
+            index++;
+        }
         
         circle.style.background = gradient.slice(0, -2) + ')';
     },
@@ -144,7 +155,7 @@ window.games = {
         }
         
         // Списываем баланс через защищенный метод
-        const updated = await DB.users.updateBalance(user.tg_id, amount, 'subtract');
+        const updated = await DB.users.subtractBalance(user.tg_id, amount);
         
         if (!updated) {
             window.app.showNotification('Ошибка списания средств');
@@ -160,9 +171,15 @@ window.games = {
         });
         
         if (placed) {
-            this.circle.bets.push({ userId: user.tg_id, amount });
+            // Добавляем ставку
+            this.circle.bets.push({ user_id: user.tg_id, amount });
+            
+            // Обновляем сумму ставок игрока
+            const currentAmount = this.circle.playerBets.get(user.tg_id) || 0;
+            this.circle.playerBets.set(user.tg_id, currentAmount + amount);
+            
             this.circle.pool += amount;
-            this.circle.players++;
+            this.circle.players = this.circle.playerBets.size; // Количество уникальных игроков
             
             if (this.circle.timer === 0) {
                 this.circle.timer = 120;
@@ -173,22 +190,24 @@ window.games = {
             window.app.showNotification('✅ Ставка принята!');
             document.getElementById('circleBetAmount').value = '1';
             
-            // Перезагружаем ставки
-            await this.loadCircleBets();
+            // Добавляем строку с онлайн статистикой
+            this.updateOnlineStats();
         }
     },
     
     async finishCircle() {
         if (this.circle.bets.length === 0) return;
         
-        const winner = this.circle.bets[Math.floor(Math.random() * this.circle.bets.length)];
+        // Выбираем случайного игрока из уникальных
+        const players = Array.from(this.circle.playerBets.keys());
+        const winnerId = players[Math.floor(Math.random() * players.length)];
         const winAmount = this.circle.pool;
         
         try {
             // Начисляем выигрыш победителю
-            await DB.users.updateBalance(winner.userId, winAmount, 'add');
+            await DB.users.addBalance(winnerId, winAmount);
             
-            if (winner.userId === window.app.user?.tg_id) {
+            if (winnerId === window.app.user?.tg_id) {
                 window.app.showNotification(`🎉 Вы выиграли ${winAmount.toFixed(3)} NC!`);
             }
             
@@ -198,6 +217,7 @@ window.games = {
         }
         
         this.circle.bets = [];
+        this.circle.playerBets.clear();
         this.circle.pool = 0;
         this.circle.players = 0;
         this.circle.timer = 0;
@@ -231,21 +251,32 @@ window.games = {
         try {
             const bets = await DB.lottery.getBets('eagle');
             if (bets && bets.length > 0) {
-                this.eagle.bets = bets.map(bet => ({
-                    userId: bet.user_id,
-                    team: bet.team,
-                    amount: bet.amount
-                }));
+                this.eagle.bets = bets;
                 
-                this.eagle.eaglePool = bets
-                    .filter(b => b.team === 'eagle')
-                    .reduce((s, b) => s + (b.amount || 0), 0);
+                // Группируем по командам и игрокам
+                this.eagle.playerBets.clear();
+                let eagleTotal = 0;
+                let revardTotal = 0;
+                
+                bets.forEach(bet => {
+                    const userId = bet.user_id;
+                    const key = `${bet.team}_${userId}`;
+                    const currentAmount = this.eagle.playerBets.get(key) || 0;
+                    this.eagle.playerBets.set(key, currentAmount + bet.amount);
                     
-                this.eagle.revardPool = bets
-                    .filter(b => b.team === 'revard')
-                    .reduce((s, b) => s + (b.amount || 0), 0);
-                    
-                this.eagle.players = bets.length;
+                    if (bet.team === 'eagle') {
+                        eagleTotal += bet.amount;
+                    } else {
+                        revardTotal += bet.amount;
+                    }
+                });
+                
+                this.eagle.eaglePool = eagleTotal;
+                this.eagle.revardPool = revardTotal;
+                
+                // Уникальные игроки
+                const uniquePlayers = new Set(bets.map(b => b.user_id));
+                this.eagle.players = uniquePlayers.size;
                 
                 if (this.eagle.timer === 0 && this.eagle.players > 0) {
                     this.eagle.timer = 120;
@@ -290,7 +321,7 @@ window.games = {
         }
         
         // Списываем баланс через защищенный метод
-        const updated = await DB.users.updateBalance(user.tg_id, amount, 'subtract');
+        const updated = await DB.users.subtractBalance(user.tg_id, amount);
         
         if (!updated) {
             window.app.showNotification('Ошибка списания средств');
@@ -308,18 +339,21 @@ window.games = {
         
         if (placed) {
             this.eagle.bets.push({ 
-                userId: user.tg_id, 
+                user_id: user.tg_id, 
                 team: this.selectedTeam, 
                 amount: amount 
             });
             
+            // Обновляем статистику команд
             if (this.selectedTeam === 'eagle') {
                 this.eagle.eaglePool += amount;
             } else {
                 this.eagle.revardPool += amount;
             }
             
-            this.eagle.players++;
+            // Обновляем уникальных игроков
+            const uniquePlayers = new Set(this.eagle.bets.map(b => b.user_id));
+            this.eagle.players = uniquePlayers.size;
             
             if (this.eagle.timer === 0) {
                 this.eagle.timer = 120;
@@ -330,8 +364,8 @@ window.games = {
             window.app.showNotification('✅ Ставка сделана!');
             document.getElementById('eagleBetAmount').value = '10';
             
-            // Перезагружаем ставки
-            await this.loadEagleBets();
+            // Обновляем онлайн статистику
+            this.updateOnlineStats();
         }
     },
     
@@ -347,9 +381,9 @@ window.games = {
         try {
             for (const bet of winningBets) {
                 const winAmount = (bet.amount / winningPool) * totalPool;
-                await DB.users.updateBalance(bet.userId, winAmount, 'add');
+                await DB.users.addBalance(bet.user_id, winAmount);
                 
-                if (bet.userId === window.app.user?.tg_id) {
+                if (bet.user_id === window.app.user?.tg_id) {
                     window.app.showNotification(`🎉 Вы выиграли +${winAmount.toFixed(3)} NC!`);
                 }
             }
@@ -360,6 +394,7 @@ window.games = {
         }
         
         this.eagle.bets = [];
+        this.eagle.playerBets.clear();
         this.eagle.eaglePool = 0;
         this.eagle.revardPool = 0;
         this.eagle.players = 0;
@@ -377,5 +412,14 @@ window.games = {
         document.getElementById('revardPool').textContent = (this.eagle.revardPool || 0).toFixed(3);
         document.getElementById('eaglePlayers').textContent = this.eagle.players || 0;
         document.getElementById('eagleTimer').textContent = this.eagle.timer || 0;
+    },
+    
+    // Обновление статистики онлайн
+    updateOnlineStats() {
+        const onlineElement = document.getElementById('onlineStats');
+        if (onlineElement) {
+            const totalPlayers = this.circle.players + this.eagle.players;
+            onlineElement.textContent = `Online: ${totalPlayers}`;
+        }
     }
 };
