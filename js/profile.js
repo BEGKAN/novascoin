@@ -124,4 +124,15 @@ window.profile = {
             creator_id: window.app.user.tg_id
         };
         
-        const promo
+        const promo = await DB.promocodes.create(promoData);
+        
+        if (promo) {
+            window.app.showNotification('✅ Промокод создан');
+            document.getElementById('newPromoName').value = '';
+            document.getElementById('promoSum').value = '';
+            document.getElementById('promoUses').value = '';
+        } else {
+            window.app.showNotification('❌ Ошибка создания промокода');
+        }
+    }
+};
