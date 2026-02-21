@@ -24,23 +24,20 @@ window.profile = {
             return;
         }
         
-        // Списываем баланс через защищенный метод
-        const updated = await DB.users.updateBalance(user.tg_id, 100, 'subtract');
-        
-        if (!updated) {
-            window.app.showNotification('Ошибка покупки');
-            return;
-        }
-        
-        user.balance = updated.balance;
+        user.balance -= 100;
         user.color = parseInt(color);
         
-        await DB.users.update(user.tg_id, { color: user.color });
+        const updated = await DB.users.update(user.tg_id, {
+            balance: user.balance,
+            color: user.color
+        });
         
-        document.getElementById('profileName').style.color = `hsl(${user.color}, 80%, 70%)`;
-        window.app.updateUI();
-        this.closeColorModal();
-        window.app.showNotification('✅ Цвет изменён!');
+        if (updated) {
+            document.getElementById('profileName').style.color = `hsl(${user.color}, 80%, 70%)`;
+            window.app.updateUI();
+            this.closeColorModal();
+            window.app.showNotification('✅ Цвет изменён!');
+        }
     },
     
     async changeNickname() {
@@ -54,23 +51,20 @@ window.profile = {
             return;
         }
         
-        // Списываем баланс через защищенный метод
-        const updated = await DB.users.updateBalance(user.tg_id, 100, 'subtract');
-        
-        if (!updated) {
-            window.app.showNotification('Ошибка покупки');
-            return;
-        }
-        
-        user.balance = updated.balance;
+        user.balance -= 100;
         user.nickname = newNick.trim();
         
-        await DB.users.update(user.tg_id, { nickname: user.nickname });
+        const updated = await DB.users.update(user.tg_id, {
+            balance: user.balance,
+            nickname: user.nickname
+        });
         
-        document.getElementById('profileName').textContent = user.nickname;
-        document.getElementById('usernameDisplay').textContent = user.nickname;
-        window.app.updateUI();
-        window.app.showNotification('✅ Ник изменён!');
+        if (updated) {
+            document.getElementById('profileName').textContent = user.nickname;
+            document.getElementById('usernameDisplay').textContent = user.nickname;
+            window.app.updateUI();
+            window.app.showNotification('✅ Ник изменён!');
+        }
     },
     
     togglePromo() {
@@ -100,15 +94,12 @@ window.profile = {
             return;
         }
         
-        // Начисляем бонус через защищенный метод
-        const updated = await DB.users.updateBalance(
-            window.app.user.tg_id, 
-            promo.amount, 
-            'add'
-        );
+        const user = window.app.user;
+        user.balance += promo.amount;
+        
+        const updated = await DB.users.update(user.tg_id, { balance: user.balance });
         
         if (updated) {
-            window.app.user.balance = updated.balance;
             await DB.promocodes.use(promo.id);
             window.app.updateUI();
             window.app.showNotification(`✅ +${promo.amount} NC`);
@@ -133,15 +124,4 @@ window.profile = {
             creator_id: window.app.user.tg_id
         };
         
-        const promo = await DB.promocodes.create(promoData);
-        
-        if (promo) {
-            window.app.showNotification('✅ Промокод создан');
-            document.getElementById('newPromoName').value = '';
-            document.getElementById('promoSum').value = '';
-            document.getElementById('promoUses').value = '';
-        } else {
-            window.app.showNotification('❌ Ошибка создания промокода');
-        }
-    }
-};
+        const promo
