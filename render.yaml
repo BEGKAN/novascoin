@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: novacoin-backend
+    env: node
+    buildCommand: npm install
+    startCommand: node index.js
+    envVars:
+      - key: BOT_TOKEN
+        value: 8473264948:AAHOktEr2icFaGOF5x3hVogSYcC8sU-ec_8
+      - key: SUPABASE_URL
+        value: https://ehfuuoussodqrwqoiugp.supabase.co
+      - key: SUPABASE_KEY
+        value: eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImVoZnV1b3Vzc29kcXJ3cW9pdWdwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Mzc2NTM2MjUsImV4cCI6MjA1MzIyOTYyNX0.YOUR_ACTUAL_KEY_HERE
+      - key: APP_URL
+        value: begkan.github.io/novascoin
+      - key: PORT
+        value: 3000
