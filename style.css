@@ -712,3 +712,76 @@ body {
 @keyframes spin {
     to { transform: rotate(360deg); }
 }
+
+/* Chat link */
+.chat-link {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+    color: white;
+    text-decoration: none;
+    padding: 15px 25px;
+    border-radius: 50px;
+    margin: 20px auto;
+    width: fit-content;
+    min-width: 250px;
+    font-size: 16px;
+    font-weight: bold;
+    border: 2px solid var(--primary-light);
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 15px rgba(155, 89, 182, 0.3);
+}
+
+.chat-link:hover {
+    transform: scale(1.05);
+    box-shadow: 0 6px 20px rgba(155, 89, 182, 0.5);
+    background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+}
+
+.chat-link:active {
+    transform: scale(0.95);
+}
+
+.chat-icon {
+    font-size: 24px;
+}
+
+.chat-text {
+    flex: 1;
+    text-align: center;
+}
+
+.chat-arrow {
+    font-size: 20px;
+    opacity: 0.8;
+}
+
+/* Rating update button */
+.rating-update {
+    text-align: center;
+    margin-top: 20px;
+    padding: 10px;
+}
+
+.refresh-rating {
+    background: var(--card-bg);
+    backdrop-filter: blur(10px);
+    border: 1px solid var(--primary);
+    color: var(--text);
+    padding: 10px 20px;
+    border-radius: 20px;
+    font-size: 14px;
+    cursor: pointer;
+    transition: all 0.3s;
+}
+
+.refresh-rating:hover {
+    background: var(--primary);
+    transform: scale(1.05);
+}
+
+.refresh-rating:active {
+    transform: scale(0.95);
+}
