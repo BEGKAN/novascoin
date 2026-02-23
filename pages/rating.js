@@ -47,7 +47,7 @@ window.pages.rating = {
             }
             
             const players = await response.json();
-            console.log('Rating loaded:', players);
+            console.log('Rating loaded:', players.length, 'players');
             
             window.pages.rating.players = players;
             
