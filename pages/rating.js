@@ -2,6 +2,7 @@ window.pages = window.pages || {};
 
 window.pages.rating = {
     players: [],
+    loading: false,
 
     render: () => {
         return `
@@ -11,23 +12,44 @@ window.pages.rating = {
                 <div class="rating-list" id="ratingList">
                     <div class="loading-spinner">Загрузка...</div>
                 </div>
+                
+                <div class="rating-update">
+                    <button class="refresh-rating" id="refreshRating">
+                        🔄 Обновить рейтинг
+                    </button>
+                </div>
             </div>
         `;
     },
 
-    init: async () => {
-        await window.pages.rating.loadRating();
+    init: () => {
+        window.pages.rating.loadRating();
+        
+        const refreshBtn = document.getElementById('refreshRating');
+        if (refreshBtn) {
+            refreshBtn.addEventListener('click', () => {
+                window.pages.rating.loadRating();
+            });
+        }
     },
 
     loadRating: async () => {
+        if (window.pages.rating.loading) return;
+        
+        window.pages.rating.loading = true;
+        
         try {
             const response = await fetch(`${window.app.API_URL}/api/rating`);
             if (!response.ok) throw new Error('Ошибка загрузки');
             
             const players = await response.json();
+            window.pages.rating.players = players;
+            
+            const ratingList = document.getElementById('ratingList');
+            if (!ratingList) return;
             
             if (players.length === 0) {
-                document.getElementById('ratingList').innerHTML = `
+                ratingList.innerHTML = `
                     <div class="empty-rating">
                         <span class="emoji">📊</span>
                         <p>Рейтинг пока пуст</p>
@@ -59,15 +81,20 @@ window.pages.rating = {
                 `;
             });
 
-            document.getElementById('ratingList').innerHTML = html;
+            ratingList.innerHTML = html;
         } catch (error) {
             console.error('Error loading rating:', error);
-            document.getElementById('ratingList').innerHTML = `
-                <div class="error-rating">
-                    <span class="emoji">❌</span>
-                    <p>Ошибка загрузки рейтинга</p>
-                </div>
-            `;
+            const ratingList = document.getElementById('ratingList');
+            if (ratingList) {
+                ratingList.innerHTML = `
+                    <div class="error-rating">
+                        <span class="emoji">❌</span>
+                        <p>Ошибка загрузки рейтинга</p>
+                    </div>
+                `;
+            }
+        } finally {
+            window.pages.rating.loading = false;
         }
     }
 };
