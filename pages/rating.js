@@ -39,10 +39,16 @@ window.pages.rating = {
         window.pages.rating.loading = true;
         
         try {
+            console.log('Loading rating from:', `${window.app.API_URL}/api/rating`);
             const response = await fetch(`${window.app.API_URL}/api/rating`);
-            if (!response.ok) throw new Error('Ошибка загрузки');
+            
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
             
             const players = await response.json();
+            console.log('Rating loaded:', players);
+            
             window.pages.rating.players = players;
             
             const ratingList = document.getElementById('ratingList');
@@ -90,6 +96,7 @@ window.pages.rating = {
                     <div class="error-rating">
                         <span class="emoji">❌</span>
                         <p>Ошибка загрузки рейтинга</p>
+                        <p class="hint">Проверьте подключение к серверу</p>
                     </div>
                 `;
             }
