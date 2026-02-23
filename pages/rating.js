@@ -1,107 +1,48 @@
 window.pages = window.pages || {};
 
 window.pages.rating = {
-    players: [],
-    loading: false,
-
-    render: () => {
-        return `
-            <div class="rating-page">
-                <h2>🏆 Рейтинг игроков</h2>
-                
-                <div class="rating-list" id="ratingList">
-                    <div class="loading-spinner">Загрузка...</div>
-                </div>
-                
-                <div class="rating-update">
-                    <button class="refresh-rating" id="refreshRating">
-                        🔄 Обновить рейтинг
-                    </button>
-                </div>
+    render: () => `
+        <div class="rating-page">
+            <h2>🏆 Рейтинг</h2>
+            <div class="rating-list" id="ratingList">
+                <div class="loading-spinner">Загрузка...</div>
             </div>
-        `;
-    },
+            <button class="refresh-rating" id="refreshRating">🔄 Обновить</button>
+        </div>
+    `,
 
     init: () => {
-        window.pages.rating.loadRating();
-        
-        const refreshBtn = document.getElementById('refreshRating');
-        if (refreshBtn) {
-            refreshBtn.addEventListener('click', () => {
-                window.pages.rating.loadRating();
-            });
-        }
+        window.pages.rating.load();
+        document.getElementById('refreshRating')?.addEventListener('click', () => window.pages.rating.load());
     },
 
-    loadRating: async () => {
-        if (window.pages.rating.loading) return;
-        
-        window.pages.rating.loading = true;
-        
+    load: async () => {
         try {
-            console.log('Loading rating from:', `${window.app.API_URL}/api/rating`);
-            const response = await fetch(`${window.app.API_URL}/api/rating`);
+            const res = await fetch(`${window.app.API_URL}/api/rating`);
+            const players = await res.json();
             
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            
-            const players = await response.json();
-            console.log('Rating loaded:', players.length, 'players');
-            
-            window.pages.rating.players = players;
-            
-            const ratingList = document.getElementById('ratingList');
-            if (!ratingList) return;
-            
+            const list = document.getElementById('ratingList');
+            if (!list) return;
+
             if (players.length === 0) {
-                ratingList.innerHTML = `
-                    <div class="empty-rating">
-                        <span class="emoji">📊</span>
-                        <p>Рейтинг пока пуст</p>
-                        <p class="hint">Начните играть, чтобы попасть в топ!</p>
-                    </div>
-                `;
+                list.innerHTML = `<div class="empty-rating"><span class="emoji">📊</span><p>Рейтинг пуст</p></div>`;
                 return;
             }
 
-            let html = '';
-            players.forEach((player, index) => {
-                const medal = index === 0 ? '🥇' : index === 1 ? '🥈' : index === 2 ? '🥉' : `${index + 1}.`;
-                
-                html += `
-                    <div class="rating-item" style="border-left: 4px solid ${player.color}">
-                        <div class="rating-position">${medal}</div>
-                        <div class="rating-avatar" style="background: ${player.color}">
-                            ${player.avatar}
-                        </div>
-                        <div class="rating-info">
-                            <div class="rating-name" style="color: ${player.color}">
-                                ${player.name}
-                                ${player.username ? `<span class="rating-username">@${player.username}</span>` : ''}
-                            </div>
-                            <div class="rating-balance">💰 ${player.balance.toFixed(3)} NC</div>
-                            <div class="rating-total">📈 Всего: ${player.totalEarned.toFixed(3)} NC</div>
-                        </div>
+            list.innerHTML = players.map((p, i) => `
+                <div class="rating-item" style="border-left:4px solid ${p.color}">
+                    <div class="rating-position">${i===0?'🥇':i===1?'🥈':i===2?'🥉':i+1}</div>
+                    <div class="rating-avatar" style="background:${p.color}">${p.avatar}</div>
+                    <div class="rating-info">
+                        <div class="rating-name" style="color:${p.color}">${p.name}</div>
+                        <div class="rating-balance">💰 ${p.balance.toFixed(3)} NC</div>
                     </div>
-                `;
-            });
-
-            ratingList.innerHTML = html;
+                </div>
+            `).join('');
         } catch (error) {
-            console.error('Error loading rating:', error);
-            const ratingList = document.getElementById('ratingList');
-            if (ratingList) {
-                ratingList.innerHTML = `
-                    <div class="error-rating">
-                        <span class="emoji">❌</span>
-                        <p>Ошибка загрузки рейтинга</p>
-                        <p class="hint">Проверьте подключение к серверу</p>
-                    </div>
-                `;
-            }
-        } finally {
-            window.pages.rating.loading = false;
+            document.getElementById('ratingList').innerHTML = `
+                <div class="error-rating"><span class="emoji">❌</span><p>Ошибка загрузки</p></div>
+            `;
         }
     }
 };
