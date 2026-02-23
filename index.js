@@ -528,3 +528,45 @@ cron.schedule('* * * * * *', async () => {
 app.listen(PORT, () => {
   console.log(`Server is running on port ${PORT}`);
 });
+
+// API для получения данных пользователя
+app.get('/api/user/:userId', async (req, res) => {
+    try {
+        const userId = parseInt(req.params.userId);
+        // Ваша логика получения пользователя из Supabase
+        const { data: user } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+        
+        res.json(user);
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+// API для клика
+app.post('/api/click', async (req, res) => {
+    try {
+        const { userId } = req.body;
+        
+        const { data: user } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        const clickReward = 0.001 * user.click_power;
+        const newBalance = user.balance + clickReward;
+
+        await supabase
+            .from('users')
+            .update({ balance: newBalance })
+            .eq('id', userId);
+
+        res.json({ success: true, newBalance, reward: clickReward });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
