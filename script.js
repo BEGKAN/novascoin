@@ -2,52 +2,121 @@ let tg = window.Telegram.WebApp;
 tg.expand();
 
 let userId = tg.initDataUnsafe?.user?.id;
-let balance = 0;
-let passiveIncome = 0.001;
-let clickPower = 1;
+let username = tg.initDataUnsafe?.user?.username || 'User';
+let firstName = tg.initDataUnsafe?.user?.first_name || 'User';
 
-const balanceElement = document.getElementById('balance');
-const passiveIncomeElement = document.getElementById('passiveIncome');
-const clickPowerElement = document.getElementById('clickPower');
-const coinElement = document.getElementById('coin');
+// Глобальные переменные
+let userData = {
+    balance: 0,
+    passiveIncome: 0.001,
+    clickPower: 1,
+    nickname: firstName,
+    nicknameColor: '#9b59b6',
+    stats: {
+        today: 0,
+        total: 0,
+        clicks: 0
+    }
+};
 
-// Базовый URL вашего бекенда (где запущен бот)
-const API_URL = 'http://localhost:3000'; // Если бот локально
-// Или если бот на сервере: const API_URL = 'https://ваш-сервер.com';
+// API URL (замените на ваш)
+const API_URL = 'http://localhost:3000';
+
+// Навигация
+document.querySelectorAll('.nav-item').forEach(item => {
+    item.addEventListener('click', () => {
+        const page = item.dataset.page;
+        navigateTo(page);
+    });
+});
+
+function navigateTo(page) {
+    // Обновляем активный класс
+    document.querySelectorAll('.nav-item').forEach(nav => {
+        nav.classList.remove('active');
+    });
+    document.querySelector(`[data-page="${page}"]`).classList.add('active');
+
+    // Загружаем соответствующую страницу
+    loadPage(page);
+}
+
+function loadPage(page) {
+    const content = document.getElementById('content');
+    
+    switch(page) {
+        case 'home':
+            content.innerHTML = window.pages.home.render(userData);
+            window.pages.home.init();
+            break;
+        case 'shop':
+            content.innerHTML = window.pages.shop.render(userData);
+            window.pages.shop.init();
+            break;
+        case 'games':
+            content.innerHTML = window.pages.games.render();
+            window.pages.games.init();
+            break;
+        case 'rating':
+            content.innerHTML = window.pages.rating.render();
+            window.pages.rating.init();
+            break;
+        case 'profile':
+            content.innerHTML = window.pages.profile.render(userData);
+            window.pages.profile.init();
+            break;
+    }
+}
 
 // Загрузка данных пользователя
 async function loadUserData() {
-    if (!userId) {
-        console.log('Нет Telegram userId');
-        return;
-    }
+    if (!userId) return;
 
     try {
         const response = await fetch(`${API_URL}/api/user/${userId}`);
         if (!response.ok) throw new Error('Ошибка загрузки');
         
-        const user = await response.json();
+        const data = await response.json();
         
-        balance = user.balance || 0;
-        passiveIncome = user.passive_income || 0.001;
-        clickPower = user.click_power || 1;
+        userData.balance = data.balance || 0;
+        userData.passiveIncome = data.passive_income || 0.001;
+        userData.clickPower = data.click_power || 1;
+        userData.nickname = data.nickname || firstName;
+        userData.nicknameColor = data.nickname_color || '#9b59b6';
         
-        updateUI();
+        // Обновляем текущую страницу
+        const activePage = document.querySelector('.nav-item.active').dataset.page;
+        loadPage(activePage);
     } catch (error) {
         console.error('Error loading user data:', error);
-        // Если ошибка, показываем демо-данные
-        balance = 0;
-        passiveIncome = 0.001;
-        clickPower = 1;
-        updateUI();
     }
 }
 
-// Обновление UI
-function updateUI() {
-    balanceElement.textContent = balance.toFixed(3);
-    passiveIncomeElement.textContent = passiveIncome.toFixed(3);
-    clickPowerElement.textContent = clickPower;
+// Обновление баланса
+async function updateBalance(amount) {
+    if (!userId) return false;
+
+    try {
+        const response = await fetch(`${API_URL}/api/update-balance`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ userId, amount })
+        });
+        
+        if (!response.ok) throw new Error('Ошибка обновления');
+        
+        const data = await response.json();
+        userData.balance = data.newBalance;
+        userData.stats.today += amount;
+        userData.stats.total += amount;
+        
+        return true;
+    } catch (error) {
+        console.error('Error updating balance:', error);
+        return false;
+    }
 }
 
 // Показ уведомления
@@ -63,116 +132,28 @@ function showNotification(text, isError = false) {
     }, 2000);
 }
 
-// Обработка клика
-async function handleClick() {
-    if (!userId) {
-        showNotification('❌ Ошибка авторизации', true);
-        return;
-    }
-
-    // Анимация сразу для отзывчивости
-    coinElement.style.transform = 'scale(0.9)';
-    setTimeout(() => {
-        coinElement.style.transform = '';
-    }, 100);
-
-    try {
-        const response = await fetch(`${API_URL}/api/click`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ userId })
-        });
-        
-        if (!response.ok) throw new Error('Ошибка клика');
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            balance = data.newBalance;
-            updateUI();
-            showNotification(`+${data.reward.toFixed(3)}`);
-        }
-    } catch (error) {
-        console.error('Error clicking:', error);
-        // Если сервер не доступен, работаем в демо-режиме
-        balance += 0.001 * clickPower;
-        updateUI();
-        showNotification('⚠️ Демо-режим', true);
-    }
-}
-
-// Пассивный доход (если сервер не доступен)
-setInterval(async () => {
-    if (!userId) return;
-    
-    try {
-        await loadUserData(); // Обновляем данные с сервера
-    } catch (error) {
-        // Если сервер не доступен, эмулируем
-        balance += passiveIncome;
-        updateUI();
-    }
-}, 5000); // Обновляем каждые 5 секунд
-
 // Инициализация
 if (userId) {
     loadUserData();
-    console.log('Пользователь Telegram:', userId);
+    // Загружаем главную страницу
+    navigateTo('home');
+    
+    // Обновляем данные каждые 10 секунд
+    setInterval(loadUserData, 10000);
 } else {
-    console.log('Демо-режим: нет пользователя Telegram');
     // Демо-режим
-    balance = 0;
-    passiveIncome = 0.001;
-    clickPower = 1;
-    updateUI();
-    
-    // В демо-режиме клик работает локально
-    coinElement.addEventListener('click', () => {
-        balance += 0.001 * clickPower;
-        updateUI();
-        
-        coinElement.style.transform = 'scale(0.9)';
-        setTimeout(() => {
-            coinElement.style.transform = '';
-        }, 100);
-        
-        showNotification(`+${(0.001 * clickPower).toFixed(3)}`);
-    });
+    userData.nickname = 'Демо-пользователь';
+    navigateTo('home');
 }
 
-// Если есть userId, добавляем обработчик клика
-if (userId) {
-    coinElement.addEventListener('click', handleClick);
-}
-
-// Добавляем стили для уведомлений
-const style = document.createElement('style');
-style.textContent = `
-    .notification {
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        background: #9b59b6;
-        color: white;
-        padding: 10px 20px;
-        border-radius: 10px;
-        animation: slideDown 0.3s ease;
-        z-index: 1000;
-        font-weight: bold;
-    }
-    
-    @keyframes slideDown {
-        from {
-            top: -50px;
-            opacity: 0;
-        }
-        to {
-            top: 20px;
-            opacity: 1;
-        }
-    }
-`;
-document.head.appendChild(style);
+// Экспортируем глобальные функции
+window.app = {
+    userId,
+    username,
+    firstName,
+    userData,
+    loadUserData,
+    updateBalance,
+    showNotification,
+    API_URL
+};
