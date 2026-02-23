@@ -5,38 +5,41 @@ let userId = tg.initDataUnsafe?.user?.id;
 let balance = 0;
 let passiveIncome = 0.001;
 let clickPower = 1;
-let upgrades = [];
 
 const balanceElement = document.getElementById('balance');
 const passiveIncomeElement = document.getElementById('passiveIncome');
 const clickPowerElement = document.getElementById('clickPower');
 const coinElement = document.getElementById('coin');
-const upgradesElement = document.getElementById('upgrades');
+
+// Базовый URL вашего бекенда (где запущен бот)
+const API_URL = 'http://localhost:3000'; // Если бот локально
+// Или если бот на сервере: const API_URL = 'https://ваш-сервер.com';
 
 // Загрузка данных пользователя
 async function loadUserData() {
+    if (!userId) {
+        console.log('Нет Telegram userId');
+        return;
+    }
+
     try {
-        const response = await fetch(`/api/user/${userId}`);
+        const response = await fetch(`${API_URL}/api/user/${userId}`);
+        if (!response.ok) throw new Error('Ошибка загрузки');
+        
         const user = await response.json();
         
-        balance = user.balance;
-        passiveIncome = user.passive_income;
-        clickPower = user.click_power;
+        balance = user.balance || 0;
+        passiveIncome = user.passive_income || 0.001;
+        clickPower = user.click_power || 1;
         
         updateUI();
     } catch (error) {
         console.error('Error loading user data:', error);
-    }
-}
-
-// Загрузка улучшений
-async function loadUpgrades() {
-    try {
-        const response = await fetch('/api/upgrades');
-        upgrades = await response.json();
-        renderUpgrades();
-    } catch (error) {
-        console.error('Error loading upgrades:', error);
+        // Если ошибка, показываем демо-данные
+        balance = 0;
+        passiveIncome = 0.001;
+        clickPower = 1;
+        updateUI();
     }
 }
 
@@ -48,10 +51,11 @@ function updateUI() {
 }
 
 // Показ уведомления
-function showNotification(text) {
+function showNotification(text, isError = false) {
     const notification = document.createElement('div');
     notification.className = 'notification';
     notification.textContent = text;
+    notification.style.background = isError ? '#e74c3c' : '#9b59b6';
     document.body.appendChild(notification);
     
     setTimeout(() => {
@@ -61,8 +65,19 @@ function showNotification(text) {
 
 // Обработка клика
 async function handleClick() {
+    if (!userId) {
+        showNotification('❌ Ошибка авторизации', true);
+        return;
+    }
+
+    // Анимация сразу для отзывчивости
+    coinElement.style.transform = 'scale(0.9)';
+    setTimeout(() => {
+        coinElement.style.transform = '';
+    }, 100);
+
     try {
-        const response = await fetch('/api/click', {
+        const response = await fetch(`${API_URL}/api/click`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -70,86 +85,94 @@ async function handleClick() {
             body: JSON.stringify({ userId })
         });
         
+        if (!response.ok) throw new Error('Ошибка клика');
+        
         const data = await response.json();
         
         if (data.success) {
             balance = data.newBalance;
             updateUI();
-            
-            // Анимация
-            coinElement.style.transform = 'scale(0.9)';
-            setTimeout(() => {
-                coinElement.style.transform = '';
-            }, 100);
-            
             showNotification(`+${data.reward.toFixed(3)}`);
         }
     } catch (error) {
         console.error('Error clicking:', error);
+        // Если сервер не доступен, работаем в демо-режиме
+        balance += 0.001 * clickPower;
+        updateUI();
+        showNotification('⚠️ Демо-режим', true);
     }
 }
 
-// Покупка улучшения
-async function buyUpgrade(upgradeId, price) {
-    if (balance < price) {
-        showNotification('❌ Недостаточно средств');
-        return;
-    }
+// Пассивный доход (если сервер не доступен)
+setInterval(async () => {
+    if (!userId) return;
     
     try {
-        const response = await fetch('/api/buy-upgrade', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({ userId, upgradeId })
-        });
-        
-        const data = await response.json();
-        
-        if (data.success) {
-            showNotification('✅ Улучшение куплено!');
-            await loadUserData();
-            await loadUpgrades();
-        }
+        await loadUserData(); // Обновляем данные с сервера
     } catch (error) {
-        console.error('Error buying upgrade:', error);
-        showNotification('❌ Ошибка при покупке');
+        // Если сервер не доступен, эмулируем
+        balance += passiveIncome;
+        updateUI();
     }
-}
-
-// Рендер улучшений
-function renderUpgrades() {
-    upgradesElement.innerHTML = '';
-    
-    upgrades.forEach(upgrade => {
-        const card = document.createElement('div');
-        card.className = 'upgrade-card';
-        
-        card.innerHTML = `
-            <div class="upgrade-info">
-                <div class="upgrade-name">${upgrade.name}</div>
-                <div class="upgrade-desc">${upgrade.description}</div>
-                <div class="upgrade-price">💰 ${upgrade.price.toFixed(3)}</div>
-            </div>
-            <button class="upgrade-button" onclick="buyUpgrade(${upgrade.id}, ${upgrade.price})" ${balance < upgrade.price ? 'disabled' : ''}>
-                Купить
-            </button>
-        `;
-        
-        upgradesElement.appendChild(card);
-    });
-}
-
-// Обновление баланса каждые 10 секунд
-setInterval(loadUserData, 10000);
+}, 5000); // Обновляем каждые 5 секунд
 
 // Инициализация
 if (userId) {
     loadUserData();
-    loadUpgrades();
-    
-    coinElement.addEventListener('click', handleClick);
+    console.log('Пользователь Telegram:', userId);
 } else {
-    balanceElement.textContent = 'Ошибка авторизации';
+    console.log('Демо-режим: нет пользователя Telegram');
+    // Демо-режим
+    balance = 0;
+    passiveIncome = 0.001;
+    clickPower = 1;
+    updateUI();
+    
+    // В демо-режиме клик работает локально
+    coinElement.addEventListener('click', () => {
+        balance += 0.001 * clickPower;
+        updateUI();
+        
+        coinElement.style.transform = 'scale(0.9)';
+        setTimeout(() => {
+            coinElement.style.transform = '';
+        }, 100);
+        
+        showNotification(`+${(0.001 * clickPower).toFixed(3)}`);
+    });
 }
+
+// Если есть userId, добавляем обработчик клика
+if (userId) {
+    coinElement.addEventListener('click', handleClick);
+}
+
+// Добавляем стили для уведомлений
+const style = document.createElement('style');
+style.textContent = `
+    .notification {
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        background: #9b59b6;
+        color: white;
+        padding: 10px 20px;
+        border-radius: 10px;
+        animation: slideDown 0.3s ease;
+        z-index: 1000;
+        font-weight: bold;
+    }
+    
+    @keyframes slideDown {
+        from {
+            top: -50px;
+            opacity: 0;
+        }
+        to {
+            top: 20px;
+            opacity: 1;
+        }
+    }
+`;
+document.head.appendChild(style);
