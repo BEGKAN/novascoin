@@ -2,31 +2,49 @@
 <html lang="ru">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Фиолетовый Кликер</title>
     <link rel="stylesheet" href="style.css">
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
 </head>
 <body>
-    <div class="container">
-        <div class="header">
-            <h1>💰 <span id="balance">0.000</span></h1>
-            <div class="stats">
-                <div>⚡️ <span id="passiveIncome">0.001</span>/сек</div>
-                <div>👆 x<span id="clickPower">1</span></div>
+    <div class="app-container">
+        <!-- Основной контент -->
+        <main id="content" class="content">
+            <!-- Контент будет загружаться динамически -->
+        </main>
+
+        <!-- Нижняя навигация -->
+        <nav class="bottom-nav">
+            <div class="nav-item active" data-page="home">
+                <span class="nav-icon">🏠</span>
+                <span class="nav-text">Главная</span>
             </div>
-        </div>
-
-        <div class="coin-container">
-            <img src="coin.png" alt="Фиолетовая монетка" id="coin" class="coin">
-        </div>
-
-        <div class="shop">
-            <h2>🏪 Магазин улучшений</h2>
-            <div id="upgrades" class="upgrades"></div>
-        </div>
+            <div class="nav-item" data-page="shop">
+                <span class="nav-icon">🏪</span>
+                <span class="nav-text">Магазин</span>
+            </div>
+            <div class="nav-item" data-page="games">
+                <span class="nav-icon">🎮</span>
+                <span class="nav-text">Игры</span>
+            </div>
+            <div class="nav-item" data-page="rating">
+                <span class="nav-icon">🏆</span>
+                <span class="nav-text">Рейтинг</span>
+            </div>
+            <div class="nav-item" data-page="profile">
+                <span class="nav-icon">👤</span>
+                <span class="nav-text">Профиль</span>
+            </div>
+        </nav>
     </div>
 
+    <!-- Подключаем модули -->
+    <script src="pages/home.js"></script>
+    <script src="pages/shop.js"></script>
+    <script src="pages/games.js"></script>
+    <script src="pages/rating.js"></script>
+    <script src="pages/profile.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
