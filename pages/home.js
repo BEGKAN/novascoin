@@ -13,7 +13,7 @@ window.pages.home = {
                 </div>
 
                 <div class="coin-container">
-                    <img src="coin.png" alt="Фиолетовая монетка" id="coin" class="coin">
+                    <img src="coin.png" alt="Nova Coin" id="coin" class="coin">
                 </div>
 
                 <a href="https://t.me/offNovaCoinChat" target="_blank" class="chat-link">
@@ -30,92 +30,68 @@ window.pages.home = {
         
         const coin = document.getElementById('coin');
         if (coin) {
-            // Убираем старые обработчики
-            coin.replaceWith(coin.cloneNode(true));
-            const newCoin = document.getElementById('coin');
-            
-            newCoin.addEventListener('click', async (e) => {
+            coin.addEventListener('click', async (e) => {
                 e.preventDefault();
-                e.stopPropagation();
-                
-                console.log('Coin clicked!');
                 
                 // Анимация
-                newCoin.style.transform = 'scale(0.8)';
-                newCoin.style.transition = 'transform 0.1s';
-                
+                coin.style.transform = 'scale(0.8)';
                 setTimeout(() => {
-                    newCoin.style.transform = 'scale(1)';
+                    coin.style.transform = 'scale(1)';
                 }, 100);
-
                 setTimeout(() => {
-                    newCoin.style.transform = '';
-                    newCoin.style.transition = '';
+                    coin.style.transform = '';
                 }, 200);
 
-                // Расчет награды
-                const reward = 0.001 * window.app.userData.clickPower;
-                
-                if (window.app.userId) {
-                    try {
-                        const response = await fetch(`${window.app.API_URL}/api/click`, {
-                            method: 'POST',
-                            headers: {
-                                'Content-Type': 'application/json',
-                            },
-                            body: JSON.stringify({ 
-                                userId: window.app.userId 
-                            })
-                        });
-                        
-                        if (!response.ok) throw new Error('Ошибка клика');
-                        
-                        const data = await response.json();
-                        
-                        if (data.success) {
-                            window.app.userData.balance = data.newBalance;
-                            
-                            // Обновляем отображение
-                            const balanceEl = document.getElementById('balance');
-                            if (balanceEl) {
-                                balanceEl.textContent = window.app.userData.balance.toFixed(3);
-                            }
-                            
-                            window.pages.home.showFloatingReward(`+${data.reward.toFixed(3)}`, newCoin);
-                            
-                            window.app.userData.stats.clicks++;
-                            window.app.userData.stats.today += data.reward;
-                            window.app.userData.stats.total += data.reward;
-                        }
-                    } catch (error) {
-                        console.error('Error clicking:', error);
-                        window.pages.home.showFloatingReward(`+${reward.toFixed(3)} (офлайн)`, newCoin);
-                        
-                        window.app.userData.balance += reward;
-                        const balanceEl = document.getElementById('balance');
-                        if (balanceEl) {
-                            balanceEl.textContent = window.app.userData.balance.toFixed(3);
-                        }
-                    }
-                } else {
-                    window.app.userData.balance += reward;
-                    const balanceEl = document.getElementById('balance');
-                    if (balanceEl) {
-                        balanceEl.textContent = window.app.userData.balance.toFixed(3);
-                    }
+                if (!window.app.userId) {
+                    window.app.userData.balance += 0.001;
+                    document.getElementById('balance').textContent = window.app.userData.balance.toFixed(3);
+                    window.pages.home.showFloatingReward('+0.001', coin);
+                    return;
+                }
+
+                try {
+                    const response = await fetch(`${window.app.API_URL}/api/click`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ userId: window.app.userId })
+                    });
                     
-                    window.pages.home.showFloatingReward(`+${reward.toFixed(3)}`, newCoin);
+                    if (!response.ok) throw new Error('Ошибка клика');
                     
-                    window.app.userData.stats.clicks++;
-                    window.app.userData.stats.today += reward;
-                    window.app.userData.stats.total += reward;
+                    const data = await response.json();
+                    
+                    if (data.success) {
+                        window.app.userData.balance = data.newBalance;
+                        document.getElementById('balance').textContent = data.newBalance.toFixed(3);
+                        window.pages.home.showFloatingReward(`+${data.reward.toFixed(3)}`, coin);
+                    }
+                } catch (error) {
+                    console.error('Error clicking:', error);
+                    window.app.showNotification('❌ Ошибка подключения к серверу', true);
                 }
             });
-
-            console.log('Coin click handler attached');
         }
 
-        window.pages.home.startPassiveIncome();
+        // Пассивный доход
+        if (window.pages.home.passiveInterval) {
+            clearInterval(window.pages.home.passiveInterval);
+        }
+
+        window.pages.home.passiveInterval = setInterval(async () => {
+            if (window.app.userId) {
+                await window.app.loadUserData(true);
+                
+                const balanceEl = document.getElementById('balance');
+                const passiveEl = document.getElementById('passiveIncome');
+                const clickPowerEl = document.getElementById('clickPower');
+                
+                if (balanceEl) balanceEl.textContent = window.app.userData.balance.toFixed(3);
+                if (passiveEl) passiveEl.textContent = window.app.userData.passiveIncome.toFixed(3);
+                if (clickPowerEl) clickPowerEl.textContent = window.app.userData.clickPower;
+            }
+        }, 5000);
     },
 
     showFloatingReward: (text, element) => {
@@ -139,41 +115,6 @@ window.pages.home = {
         
         setTimeout(() => {
             floating.remove();
-        }, 1000);
-    },
-
-    startPassiveIncome: () => {
-        if (window.pages.home.passiveInterval) {
-            clearInterval(window.pages.home.passiveInterval);
-        }
-
-        window.pages.home.passiveInterval = setInterval(async () => {
-            if (window.app.userId) {
-                await window.app.loadUserData(true); // true = тихое обновление
-                
-                const balanceEl = document.getElementById('balance');
-                const passiveEl = document.getElementById('passiveIncome');
-                const clickPowerEl = document.getElementById('clickPower');
-                
-                if (balanceEl) {
-                    balanceEl.textContent = window.app.userData.balance.toFixed(3);
-                }
-                if (passiveEl) {
-                    passiveEl.textContent = window.app.userData.passiveIncome.toFixed(3);
-                }
-                if (clickPowerEl) {
-                    clickPowerEl.textContent = window.app.userData.clickPower;
-                }
-            } else {
-                window.app.userData.balance += window.app.userData.passiveIncome;
-                window.app.userData.stats.today += window.app.userData.passiveIncome;
-                window.app.userData.stats.total += window.app.userData.passiveIncome;
-                
-                const balanceEl = document.getElementById('balance');
-                if (balanceEl) {
-                    balanceEl.textContent = window.app.userData.balance.toFixed(3);
-                }
-            }
         }, 1000);
     }
 };
