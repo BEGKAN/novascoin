@@ -36,7 +36,6 @@ app.use(express.static(path.join(__dirname, 'public')));
 // Получение или создание пользователя
 async function getOrCreateUser(telegramUser) {
     try {
-        // Проверяем, есть ли пользователь
         const { data: existingUser, error: selectError } = await supabase
             .from('users')
             .select('*')
@@ -44,7 +43,6 @@ async function getOrCreateUser(telegramUser) {
             .single();
 
         if (selectError && selectError.code === 'PGRST116') {
-            // Пользователь не найден, создаем нового
             const newUser = {
                 id: telegramUser.id,
                 username: telegramUser.username || null,
@@ -53,7 +51,6 @@ async function getOrCreateUser(telegramUser) {
                 balance: 0,
                 passive_income: 0.001,
                 click_power: 1,
-                passive_multiplier: 1,
                 nickname: telegramUser.first_name || 'User',
                 nickname_color: '#9b59b6',
                 stats_today: 0,
@@ -70,7 +67,7 @@ async function getOrCreateUser(telegramUser) {
 
             if (insertError) throw insertError;
             
-            // Создаем запись в статистике за сегодня
+            // Создаем запись в дневной статистике
             await supabase
                 .from('daily_stats')
                 .insert([{
@@ -105,8 +102,8 @@ async function updatePassiveIncome(userId) {
         const secondsPassed = Math.floor((now - lastUpdate) / 1000);
         
         if (secondsPassed > 0) {
-            const passiveEarned = user.passive_income * secondsPassed;
-            const newBalance = user.balance + passiveEarned;
+            const passiveEarned = Number((user.passive_income * secondsPassed).toFixed(3));
+            const newBalance = Number((user.balance + passiveEarned).toFixed(3));
             
             await supabase
                 .from('users')
@@ -115,16 +112,6 @@ async function updatePassiveIncome(userId) {
                     last_passive_update: now.toISOString()
                 })
                 .eq('id', userId);
-
-            // Обновляем статистику за сегодня
-            const today = now.toISOString().split('T')[0];
-            await supabase
-                .from('daily_stats')
-                .upsert({
-                    user_id: userId,
-                    date: today,
-                    earnings: passiveEarned
-                }, { onConflict: 'user_id,date' });
 
             return newBalance;
         }
@@ -137,7 +124,6 @@ async function updatePassiveIncome(userId) {
 
 // ============= КОМАНДЫ ТЕЛЕГРАМ БОТА =============
 
-// Команда /start
 bot.onText(/\/start/, async (msg) => {
     const chatId = msg.chat.id;
     const user = await getOrCreateUser(msg.from);
@@ -147,7 +133,7 @@ bot.onText(/\/start/, async (msg) => {
     }
 
     const welcomeMessage = `
-🎮 Добро пожаловать в Фиолетовый Кликер!
+🎮 Добро пожаловать в Nova Coin!
 
 💰 Твой баланс: ${user.balance.toFixed(3)} NC
 ⚡️ Пассивный доход: ${user.passive_income.toFixed(3)}/сек
@@ -173,7 +159,6 @@ bot.onText(/\/start/, async (msg) => {
     });
 });
 
-// Команда "бал"
 bot.onText(/бал/, async (msg) => {
     const chatId = msg.chat.id;
     const newBalance = await updatePassiveIncome(msg.from.id);
@@ -187,7 +172,6 @@ bot.onText(/бал/, async (msg) => {
     await bot.sendMessage(chatId, `💰 Твой баланс: ${(user?.balance || 0).toFixed(3)} NC`);
 });
 
-// Команда /balance
 bot.onText(/\/balance/, async (msg) => {
     const chatId = msg.chat.id;
     await updatePassiveIncome(msg.from.id);
@@ -209,7 +193,6 @@ bot.onText(/\/balance/, async (msg) => {
     `);
 });
 
-// Команда /top
 bot.onText(/\/top/, async (msg) => {
     const chatId = msg.chat.id;
     
@@ -234,7 +217,6 @@ bot.onText(/\/top/, async (msg) => {
 
 // ============= ЛОТЕРЕЙНАЯ СИСТЕМА =============
 
-// Парсинг суммы (1к, 10к, 1кк)
 function parseAmount(text) {
     const match = text.match(/(\d+)(к*)/i);
     if (!match) return null;
@@ -246,7 +228,6 @@ function parseAmount(text) {
     return amount;
 }
 
-// Создание лотереи
 bot.onText(/лотерея/, async (msg) => {
     const chatId = msg.chat.id;
     
@@ -254,7 +235,7 @@ bot.onText(/лотерея/, async (msg) => {
         .from('lotteries')
         .select('*')
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
     if (activeLottery) {
         return bot.sendMessage(chatId, '🎲 Лотерея уже активна! Сделайте ставку командой "ставка [сумма]"');
@@ -278,7 +259,6 @@ bot.onText(/лотерея/, async (msg) => {
     `);
 });
 
-// Ставка
 bot.onText(/ставка (.+)/, async (msg, match) => {
     const chatId = msg.chat.id;
     const amountText = match[1];
@@ -292,7 +272,7 @@ bot.onText(/ставка (.+)/, async (msg, match) => {
         .from('lotteries')
         .select('*')
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
     if (!activeLottery) {
         return bot.sendMessage(chatId, '❌ Нет активной лотереи. Создайте командой "лотерея"');
@@ -310,13 +290,11 @@ bot.onText(/ставка (.+)/, async (msg, match) => {
         return bot.sendMessage(chatId, `❌ Недостаточно средств! Твой баланс: ${user?.balance.toFixed(3) || 0} NC`);
     }
 
-    // Списываем средства
     await supabase
         .from('users')
         .update({ balance: user.balance - amount })
         .eq('id', msg.from.id);
 
-    // Записываем транзакцию
     await supabase
         .from('transactions')
         .insert([{
@@ -326,7 +304,6 @@ bot.onText(/ставка (.+)/, async (msg, match) => {
             description: 'Ставка в лотерее'
         }]);
 
-    // Добавляем ставку
     await supabase
         .from('lottery_bets')
         .insert([{
@@ -335,7 +312,6 @@ bot.onText(/ставка (.+)/, async (msg, match) => {
             amount: amount
         }]);
 
-    // Обновляем призовой фонд
     await supabase
         .from('lotteries')
         .update({ prize: (activeLottery.prize || 0) + amount })
@@ -344,7 +320,6 @@ bot.onText(/ставка (.+)/, async (msg, match) => {
     bot.sendMessage(chatId, `✅ Ставка ${amountText} принята!`);
 });
 
-// Завершение лотереи
 bot.onText(/кончить/, async (msg) => {
     const chatId = msg.chat.id;
     
@@ -352,7 +327,7 @@ bot.onText(/кончить/, async (msg) => {
         .from('lotteries')
         .select('*')
         .eq('status', 'active')
-        .single();
+        .maybeSingle();
 
     if (!activeLottery) {
         return bot.sendMessage(chatId, '❌ Нет активной лотереи');
@@ -372,11 +347,9 @@ bot.onText(/кончить/, async (msg) => {
         return bot.sendMessage(chatId, '❌ В лотерее не было ставок');
     }
 
-    // Выбираем победителя
     const winner = bets[Math.floor(Math.random() * bets.length)];
     const prize = activeLottery.prize || 0;
 
-    // Начисляем приз
     const { data: winnerUser } = await supabase
         .from('users')
         .select('balance, stats_total')
@@ -391,7 +364,6 @@ bot.onText(/кончить/, async (msg) => {
         })
         .eq('id', winner.user_id);
 
-    // Записываем транзакцию
     await supabase
         .from('transactions')
         .insert([{
@@ -401,7 +373,6 @@ bot.onText(/кончить/, async (msg) => {
             description: 'Выигрыш в лотерее'
         }]);
 
-    // Завершаем лотерею
     await supabase
         .from('lotteries')
         .update({ 
@@ -424,12 +395,10 @@ bot.onText(/кончить/, async (msg) => {
 
 // ============= API ENDPOINTS ДЛЯ MINI APP =============
 
-// Получение данных пользователя
 app.get('/api/user/:userId', async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
         
-        // Обновляем пассивный доход
         await updatePassiveIncome(userId);
         
         const { data: user, error } = await supabase
@@ -449,7 +418,6 @@ app.get('/api/user/:userId', async (req, res) => {
     }
 });
 
-// Обработка клика
 app.post('/api/click', async (req, res) => {
     try {
         const { userId } = req.body;
@@ -464,31 +432,28 @@ app.post('/api/click', async (req, res) => {
             return res.status(404).json({ error: 'User not found' });
         }
 
-        const clickReward = 0.001 * user.click_power;
-        const newBalance = user.balance + clickReward;
+        const clickReward = Number((0.001 * user.click_power).toFixed(3));
+        const newBalance = Number((user.balance + clickReward).toFixed(3));
         const today = new Date().toISOString().split('T')[0];
 
-        // Обновляем пользователя
         await supabase
             .from('users')
             .update({ 
                 balance: newBalance,
-                stats_today: user.stats_today + clickReward,
-                stats_total: user.stats_total + clickReward,
+                stats_today: Number((user.stats_today + clickReward).toFixed(3)),
+                stats_total: Number((user.stats_total + clickReward).toFixed(3)),
                 stats_clicks: user.stats_clicks + 1
             })
             .eq('id', userId);
 
-        // Обновляем дневную статистику
         await supabase
             .from('daily_stats')
             .upsert({
                 user_id: userId,
                 date: today,
-                earnings: clickReward
+                earnings: Number((clickReward).toFixed(3))
             }, { onConflict: 'user_id,date' });
 
-        // Записываем транзакцию
         await supabase
             .from('transactions')
             .insert([{
@@ -509,32 +474,6 @@ app.post('/api/click', async (req, res) => {
     }
 });
 
-// Обновление баланса (для лотерей и т.д.)
-app.post('/api/update-balance', async (req, res) => {
-    try {
-        const { userId, amount } = req.body;
-        
-        const { data: user } = await supabase
-            .from('users')
-            .select('balance')
-            .eq('id', userId)
-            .single();
-
-        const newBalance = user.balance + amount;
-
-        await supabase
-            .from('users')
-            .update({ balance: newBalance })
-            .eq('id', userId);
-
-        res.json({ success: true, newBalance });
-    } catch (error) {
-        console.error('Error in /api/update-balance:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-// Получение рейтинга
 app.get('/api/rating', async (req, res) => {
     try {
         const { data: users, error } = await supabase
@@ -545,14 +484,13 @@ app.get('/api/rating', async (req, res) => {
 
         if (error) throw error;
 
-        // Форматируем для отправки
         const formattedUsers = users.map(user => ({
             id: user.id,
             name: user.nickname || user.first_name,
             username: user.username,
             balance: user.balance,
             totalEarned: user.stats_total,
-            avatar: user.first_name ? user.first_name[0].toUpperCase() : '👤',
+            avatar: (user.nickname || user.first_name) ? (user.nickname || user.first_name)[0].toUpperCase() : '👤',
             color: user.nickname_color || '#9b59b6'
         }));
 
@@ -563,7 +501,6 @@ app.get('/api/rating', async (req, res) => {
     }
 });
 
-// Покупка улучшения
 app.post('/api/buy-upgrade', async (req, res) => {
     try {
         const { userId, upgradeId, price, type, multiplier } = req.body;
@@ -578,21 +515,19 @@ app.post('/api/buy-upgrade', async (req, res) => {
             return res.status(400).json({ error: 'Insufficient funds' });
         }
 
-        // Обновляем характеристики
         const updates = {};
         if (type === 'click') {
             updates.click_power = user.click_power * multiplier;
         } else {
-            updates.passive_income = user.passive_income * multiplier;
+            updates.passive_income = Number((user.passive_income * multiplier).toFixed(3));
         }
-        updates.balance = user.balance - price;
+        updates.balance = Number((user.balance - price).toFixed(3));
 
         await supabase
             .from('users')
             .update(updates)
             .eq('id', userId);
 
-        // Записываем транзакцию
         await supabase
             .from('transactions')
             .insert([{
@@ -609,7 +544,6 @@ app.post('/api/buy-upgrade', async (req, res) => {
     }
 });
 
-// Смена ника
 app.post('/api/change-nickname', async (req, res) => {
     try {
         const { userId, newNickname } = req.body;
@@ -628,11 +562,10 @@ app.post('/api/change-nickname', async (req, res) => {
             .from('users')
             .update({ 
                 nickname: newNickname,
-                balance: user.balance - 1000
+                balance: Number((user.balance - 1000).toFixed(3))
             })
             .eq('id', userId);
 
-        // Записываем транзакцию
         await supabase
             .from('transactions')
             .insert([{
@@ -649,7 +582,6 @@ app.post('/api/change-nickname', async (req, res) => {
     }
 });
 
-// Смена цвета ника
 app.post('/api/change-color', async (req, res) => {
     try {
         const { userId, newColor } = req.body;
@@ -668,18 +600,17 @@ app.post('/api/change-color', async (req, res) => {
             .from('users')
             .update({ 
                 nickname_color: newColor,
-                balance: user.balance - 1000
+                balance: Number((user.balance - 1000).toFixed(3))
             })
             .eq('id', userId);
 
-        // Записываем транзакцию
         await supabase
             .from('transactions')
             .insert([{
                 user_id: userId,
                 amount: -1000,
                 type: 'color_change',
-                description: `Смена цвета ника`
+                description: 'Смена цвета ника'
             }]);
 
         res.json({ success: true });
@@ -691,7 +622,6 @@ app.post('/api/change-color', async (req, res) => {
 
 // ============= ПАССИВНЫЙ ДОХОД =============
 
-// Каждую секунду обновляем пассивный доход для всех пользователей
 cron.schedule('* * * * * *', async () => {
     try {
         const { data: users } = await supabase
