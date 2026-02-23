@@ -22,71 +22,74 @@ const supabase = createClient(supabaseUrl, supabaseKey);
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-// Middleware
-app.use(cors({
-    origin: '*',
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization']
-}));
+// Middleware - ВАЖНО для работы с телефона
+app.use((req, res, next) => {
+    res.header('Access-Control-Allow-Origin', '*');
+    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept, Authorization');
+    res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+    if (req.method === 'OPTIONS') {
+        return res.sendStatus(200);
+    }
+    next();
+});
 app.use(bodyParser.json());
 app.use(express.static(path.join(__dirname, 'public')));
 
 // ============= ФУНКЦИИ ДЛЯ РАБОТЫ С БАЗОЙ ДАННЫХ =============
 
-// Получение или создание пользователя
 async function getOrCreateUser(telegramUser) {
     try {
+        console.log('Getting or creating user:', telegramUser.id);
+        
         const { data: existingUser, error: selectError } = await supabase
             .from('users')
             .select('*')
             .eq('id', telegramUser.id)
-            .single();
+            .maybeSingle();
 
-        if (selectError && selectError.code === 'PGRST116') {
-            const newUser = {
-                id: telegramUser.id,
-                username: telegramUser.username || null,
-                first_name: telegramUser.first_name || 'User',
-                last_name: telegramUser.last_name || null,
-                balance: 0,
-                passive_income: 0.001,
-                click_power: 1,
-                nickname: telegramUser.first_name || 'User',
-                nickname_color: '#9b59b6',
-                stats_today: 0,
-                stats_total: 0,
-                stats_clicks: 0,
-                last_passive_update: new Date().toISOString()
-            };
-
-            const { data: createdUser, error: insertError } = await supabase
-                .from('users')
-                .insert([newUser])
-                .select()
-                .single();
-
-            if (insertError) throw insertError;
-            
-            // Создаем запись в дневной статистике
-            await supabase
-                .from('daily_stats')
-                .insert([{
-                    user_id: telegramUser.id,
-                    date: new Date().toISOString().split('T')[0],
-                    earnings: 0
-                }]);
-
-            return createdUser;
+        if (existingUser) {
+            console.log('User found:', existingUser.id);
+            return existingUser;
         }
 
-        return existingUser;
+        console.log('Creating new user for ID:', telegramUser.id);
+        
+        const newUser = {
+            id: telegramUser.id,
+            username: telegramUser.username || null,
+            first_name: telegramUser.first_name || 'User',
+            last_name: telegramUser.last_name || null,
+            balance: 0,
+            passive_income: 0.001,
+            click_power: 1,
+            nickname: telegramUser.first_name || 'User',
+            nickname_color: '#9b59b6',
+            stats_today: 0,
+            stats_total: 0,
+            stats_clicks: 0,
+            last_passive_update: new Date().toISOString()
+        };
+
+        const { data: createdUser, error: insertError } = await supabase
+            .from('users')
+            .insert([newUser])
+            .select()
+            .single();
+
+        if (insertError) {
+            console.error('Error creating user:', insertError);
+            throw insertError;
+        }
+        
+        console.log('User created successfully:', createdUser.id);
+        return createdUser;
+        
     } catch (error) {
         console.error('Error in getOrCreateUser:', error);
         return null;
     }
 }
 
-// Обновление пассивного дохода
 async function updatePassiveIncome(userId) {
     try {
         const { data: user, error } = await supabase
@@ -161,7 +164,7 @@ bot.onText(/\/start/, async (msg) => {
 
 bot.onText(/бал/, async (msg) => {
     const chatId = msg.chat.id;
-    const newBalance = await updatePassiveIncome(msg.from.id);
+    await updatePassiveIncome(msg.from.id);
     
     const { data: user } = await supabase
         .from('users')
@@ -241,15 +244,13 @@ bot.onText(/лотерея/, async (msg) => {
         return bot.sendMessage(chatId, '🎲 Лотерея уже активна! Сделайте ставку командой "ставка [сумма]"');
     }
 
-    const { data: lottery } = await supabase
+    await supabase
         .from('lotteries')
         .insert([{ 
             status: 'active',
             prize: 0,
             created_at: new Date().toISOString()
-        }])
-        .select()
-        .single();
+        }]);
 
     bot.sendMessage(chatId, `
 🎲 Новая лотерея создана!
@@ -294,15 +295,6 @@ bot.onText(/ставка (.+)/, async (msg, match) => {
         .from('users')
         .update({ balance: user.balance - amount })
         .eq('id', msg.from.id);
-
-    await supabase
-        .from('transactions')
-        .insert([{
-            user_id: msg.from.id,
-            amount: -amount,
-            type: 'lottery_bet',
-            description: 'Ставка в лотерее'
-        }]);
 
     await supabase
         .from('lottery_bets')
@@ -365,15 +357,6 @@ bot.onText(/кончить/, async (msg) => {
         .eq('id', winner.user_id);
 
     await supabase
-        .from('transactions')
-        .insert([{
-            user_id: winner.user_id,
-            amount: prize,
-            type: 'lottery_win',
-            description: 'Выигрыш в лотерее'
-        }]);
-
-    await supabase
         .from('lotteries')
         .update({ 
             status: 'finished',
@@ -388,16 +371,19 @@ bot.onText(/кончить/, async (msg) => {
 🎉 Лотерея завершена!
 🏆 Победитель: ${winnerInfo.user.first_name}
 💰 Выигрыш: ${prize.toFixed(3)} NC
-
-Поздравляем! 🎊
     `);
 });
 
 // ============= API ENDPOINTS ДЛЯ MINI APP =============
 
+app.get('/api/test', (req, res) => {
+    res.json({ status: 'ok', message: 'Server is running' });
+});
+
 app.get('/api/user/:userId', async (req, res) => {
     try {
         const userId = parseInt(req.params.userId);
+        console.log('API: Getting user', userId);
         
         await updatePassiveIncome(userId);
         
@@ -408,12 +394,14 @@ app.get('/api/user/:userId', async (req, res) => {
             .single();
 
         if (error) {
+            console.error('API: User not found', error);
             return res.status(404).json({ error: 'User not found' });
         }
 
+        console.log('API: User found', user.id);
         res.json(user);
     } catch (error) {
-        console.error('Error in /api/user:', error);
+        console.error('API Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -421,6 +409,7 @@ app.get('/api/user/:userId', async (req, res) => {
 app.post('/api/click', async (req, res) => {
     try {
         const { userId } = req.body;
+        console.log('API: Click from user', userId);
         
         const { data: user, error: selectError } = await supabase
             .from('users')
@@ -429,6 +418,7 @@ app.post('/api/click', async (req, res) => {
             .single();
 
         if (selectError) {
+            console.error('API: User not found for click', selectError);
             return res.status(404).json({ error: 'User not found' });
         }
 
@@ -446,36 +436,24 @@ app.post('/api/click', async (req, res) => {
             })
             .eq('id', userId);
 
-        await supabase
-            .from('daily_stats')
-            .upsert({
-                user_id: userId,
-                date: today,
-                earnings: Number((clickReward).toFixed(3))
-            }, { onConflict: 'user_id,date' });
-
-        await supabase
-            .from('transactions')
-            .insert([{
-                user_id: userId,
-                amount: clickReward,
-                type: 'click',
-                description: 'Клик по монетке'
-            }]);
+        console.log('API: Click successful, new balance:', newBalance);
 
         res.json({ 
             success: true, 
             newBalance, 
             reward: clickReward 
         });
+        
     } catch (error) {
-        console.error('Error in /api/click:', error);
+        console.error('API Click Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
 
 app.get('/api/rating', async (req, res) => {
     try {
+        console.log('API: Getting rating');
+        
         const { data: users, error } = await supabase
             .from('users')
             .select('id, username, first_name, balance, stats_total, nickname, nickname_color')
@@ -494,128 +472,10 @@ app.get('/api/rating', async (req, res) => {
             color: user.nickname_color || '#9b59b6'
         }));
 
+        console.log('API: Rating found', formattedUsers.length, 'users');
         res.json(formattedUsers);
     } catch (error) {
-        console.error('Error in /api/rating:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/buy-upgrade', async (req, res) => {
-    try {
-        const { userId, upgradeId, price, type, multiplier } = req.body;
-        
-        const { data: user } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', userId)
-            .single();
-
-        if (user.balance < price) {
-            return res.status(400).json({ error: 'Insufficient funds' });
-        }
-
-        const updates = {};
-        if (type === 'click') {
-            updates.click_power = user.click_power * multiplier;
-        } else {
-            updates.passive_income = Number((user.passive_income * multiplier).toFixed(3));
-        }
-        updates.balance = Number((user.balance - price).toFixed(3));
-
-        await supabase
-            .from('users')
-            .update(updates)
-            .eq('id', userId);
-
-        await supabase
-            .from('transactions')
-            .insert([{
-                user_id: userId,
-                amount: -price,
-                type: 'upgrade',
-                description: `Покупка улучшения ID: ${upgradeId}`
-            }]);
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error in /api/buy-upgrade:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/change-nickname', async (req, res) => {
-    try {
-        const { userId, newNickname } = req.body;
-        
-        const { data: user } = await supabase
-            .from('users')
-            .select('balance')
-            .eq('id', userId)
-            .single();
-
-        if (user.balance < 1000) {
-            return res.status(400).json({ error: 'Insufficient funds' });
-        }
-
-        await supabase
-            .from('users')
-            .update({ 
-                nickname: newNickname,
-                balance: Number((user.balance - 1000).toFixed(3))
-            })
-            .eq('id', userId);
-
-        await supabase
-            .from('transactions')
-            .insert([{
-                user_id: userId,
-                amount: -1000,
-                type: 'nickname_change',
-                description: `Смена ника на ${newNickname}`
-            }]);
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error in /api/change-nickname:', error);
-        res.status(500).json({ error: error.message });
-    }
-});
-
-app.post('/api/change-color', async (req, res) => {
-    try {
-        const { userId, newColor } = req.body;
-        
-        const { data: user } = await supabase
-            .from('users')
-            .select('balance')
-            .eq('id', userId)
-            .single();
-
-        if (user.balance < 1000) {
-            return res.status(400).json({ error: 'Insufficient funds' });
-        }
-
-        await supabase
-            .from('users')
-            .update({ 
-                nickname_color: newColor,
-                balance: Number((user.balance - 1000).toFixed(3))
-            })
-            .eq('id', userId);
-
-        await supabase
-            .from('transactions')
-            .insert([{
-                user_id: userId,
-                amount: -1000,
-                type: 'color_change',
-                description: 'Смена цвета ника'
-            }]);
-
-        res.json({ success: true });
-    } catch (error) {
-        console.error('Error in /api/change-color:', error);
+        console.error('API Rating Error:', error);
         res.status(500).json({ error: error.message });
     }
 });
@@ -640,8 +500,24 @@ cron.schedule('* * * * * *', async () => {
 
 // ============= ЗАПУСК СЕРВЕРА =============
 
-app.listen(PORT, () => {
+app.listen(PORT, '0.0.0.0', () => {
     console.log(`🚀 Server running on port ${PORT}`);
+    console.log(`📱 Local: http://localhost:${PORT}`);
+    console.log(`📱 Network: http://${getLocalIP()}:${PORT}`);
     console.log(`📱 Mini App URL: https://${process.env.APP_URL}`);
     console.log(`🤖 Bot is running...`);
 });
+
+function getLocalIP() {
+    const { networkInterfaces } = require('os');
+    const nets = networkInterfaces();
+    
+    for (const name of Object.keys(nets)) {
+        for (const net of nets[name]) {
+            if (net.family === 'IPv4' && !net.internal) {
+                return net.address;
+            }
+        }
+    }
+    return 'localhost';
+}
