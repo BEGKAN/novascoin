@@ -22,9 +22,15 @@ let userData = {
     }
 };
 
-// API URL
-const API_URL = 'http://localhost:3000'; // Для локальной разработки
-// const API_URL = 'https://ваш-сервер.com'; // Для продакшена
+// API URL - определяем в зависимости от окружения
+const API_URL = (() => {
+    // Если сайт открыт через localhost
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+        return 'http://localhost:3000';
+    }
+    // Если на GitHub Pages - используем относительный путь или ваш сервер
+    return 'https://ваш-сервер.com'; // ЗАМЕНИТЕ НА ВАШ СЕРВЕР!
+})();
 
 // Навигация
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -71,14 +77,12 @@ function loadPage(page) {
 }
 
 // Загрузка данных пользователя
-async function loadUserData() {
+async function loadUserData(silent = false) {
     if (!userId) {
-        console.log('No user ID, using demo mode');
         return;
     }
 
     try {
-        console.log('Loading user data for ID:', userId);
         const response = await fetch(`${API_URL}/api/user/${userId}`);
         
         if (!response.ok) {
@@ -86,8 +90,8 @@ async function loadUserData() {
         }
         
         const data = await response.json();
-        console.log('User data loaded:', data);
         
+        // Обновляем данные
         userData.balance = data.balance || 0;
         userData.passiveIncome = data.passive_income || 0.001;
         userData.clickPower = data.click_power || 1;
@@ -97,20 +101,20 @@ async function loadUserData() {
         userData.stats.total = data.stats_total || 0;
         userData.stats.clicks = data.stats_clicks || 0;
         
-        // Обновляем текущую страницу
-        const activePage = document.querySelector('.nav-item.active').dataset.page;
-        loadPage(activePage);
+        // Если не тихое обновление - перезагружаем страницу
+        if (!silent) {
+            const activePage = document.querySelector('.nav-item.active').dataset.page;
+            loadPage(activePage);
+        }
         
     } catch (error) {
         console.error('Error loading user data:', error);
-        // В демо-режиме продолжаем с локальными данными
     }
 }
 
 // Обновление баланса
 async function updateBalance(amount) {
     if (!userId) {
-        // Демо-режим
         userData.balance += amount;
         userData.stats.today += amount;
         userData.stats.total += amount;
@@ -154,11 +158,13 @@ function showNotification(text, isError = false) {
 // Инициализация
 if (userId) {
     console.log('Initializing app for user:', userId);
-    loadUserData();
-    navigateTo('home');
+    // Первая загрузка данных
+    loadUserData().then(() => {
+        navigateTo('home');
+    });
     
-    // Обновляем данные каждые 5 секунд
-    setInterval(loadUserData, 5000);
+    // Обновляем данные каждые 10 секунд (реже, чтобы не было мигания)
+    setInterval(() => loadUserData(true), 10000);
 } else {
     console.log('Demo mode - no Telegram user');
     navigateTo('home');
