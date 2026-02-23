@@ -45,7 +45,7 @@ window.pages.home = {
                 if (!window.app.userId) {
                     window.app.userData.balance += 0.001;
                     document.getElementById('balance').textContent = window.app.userData.balance.toFixed(3);
-                    window.pages.home.showFloatingReward('+0.001', coin);
+                    showFloatingReward('+0.001', coin);
                     return;
                 }
 
@@ -65,7 +65,7 @@ window.pages.home = {
                     if (data.success) {
                         window.app.userData.balance = data.newBalance;
                         document.getElementById('balance').textContent = data.newBalance.toFixed(3);
-                        window.pages.home.showFloatingReward(`+${data.reward.toFixed(3)}`, coin);
+                        showFloatingReward(`+${data.reward.toFixed(3)}`, coin);
                     }
                 } catch (error) {
                     console.error('Error clicking:', error);
@@ -92,29 +92,29 @@ window.pages.home = {
                 if (clickPowerEl) clickPowerEl.textContent = window.app.userData.clickPower;
             }
         }, 5000);
-    },
-
-    showFloatingReward: (text, element) => {
-        const rect = element.getBoundingClientRect();
-        const floating = document.createElement('div');
-        
-        floating.textContent = text;
-        floating.style.position = 'fixed';
-        floating.style.left = rect.left + rect.width / 2 + 'px';
-        floating.style.top = rect.top + 'px';
-        floating.style.transform = 'translate(-50%, -50%)';
-        floating.style.color = '#d5b8ff';
-        floating.style.fontSize = '24px';
-        floating.style.fontWeight = 'bold';
-        floating.style.textShadow = '0 0 10px #9b59b6';
-        floating.style.pointerEvents = 'none';
-        floating.style.zIndex = '1000';
-        floating.style.animation = 'floatReward 1s ease-out forwards';
-        
-        document.body.appendChild(floating);
-        
-        setTimeout(() => {
-            floating.remove();
-        }, 1000);
     }
 };
+
+function showFloatingReward(text, element) {
+    const rect = element.getBoundingClientRect();
+    const floating = document.createElement('div');
+    
+    floating.textContent = text;
+    floating.style.position = 'fixed';
+    floating.style.left = rect.left + rect.width / 2 + 'px';
+    floating.style.top = rect.top + 'px';
+    floating.style.transform = 'translate(-50%, -50%)';
+    floating.style.color = '#d5b8ff';
+    floating.style.fontSize = '24px';
+    floating.style.fontWeight = 'bold';
+    floating.style.textShadow = '0 0 10px #9b59b6';
+    floating.style.pointerEvents = 'none';
+    floating.style.zIndex = '1000';
+    floating.style.animation = 'floatReward 1s ease-out forwards';
+    
+    document.body.appendChild(floating);
+    
+    setTimeout(() => {
+        floating.remove();
+    }, 1000);
+}
