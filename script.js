@@ -2,11 +2,14 @@ let tg = window.Telegram.WebApp;
 tg.expand();
 
 let userId = tg.initDataUnsafe?.user?.id;
-let username = tg.initDataUnsafe?.user?.username || 'User';
+let username = tg.initDataUnsafe?.user?.username || null;
 let firstName = tg.initDataUnsafe?.user?.first_name || 'User';
+
+console.log('Telegram User:', { userId, username, firstName });
 
 // Глобальные переменные
 let userData = {
+    id: userId,
     balance: 0,
     passiveIncome: 0.001,
     clickPower: 1,
@@ -19,8 +22,9 @@ let userData = {
     }
 };
 
-// API URL (замените на ваш)
-const API_URL = 'http://localhost:3000';
+// API URL
+const API_URL = 'http://localhost:3000'; // Для локальной разработки
+// const API_URL = 'https://ваш-сервер.com'; // Для продакшена
 
 // Навигация
 document.querySelectorAll('.nav-item').forEach(item => {
@@ -31,13 +35,11 @@ document.querySelectorAll('.nav-item').forEach(item => {
 });
 
 function navigateTo(page) {
-    // Обновляем активный класс
     document.querySelectorAll('.nav-item').forEach(nav => {
         nav.classList.remove('active');
     });
     document.querySelector(`[data-page="${page}"]`).classList.add('active');
 
-    // Загружаем соответствующую страницу
     loadPage(page);
 }
 
@@ -70,31 +72,50 @@ function loadPage(page) {
 
 // Загрузка данных пользователя
 async function loadUserData() {
-    if (!userId) return;
+    if (!userId) {
+        console.log('No user ID, using demo mode');
+        return;
+    }
 
     try {
+        console.log('Loading user data for ID:', userId);
         const response = await fetch(`${API_URL}/api/user/${userId}`);
-        if (!response.ok) throw new Error('Ошибка загрузки');
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
         
         const data = await response.json();
+        console.log('User data loaded:', data);
         
         userData.balance = data.balance || 0;
         userData.passiveIncome = data.passive_income || 0.001;
         userData.clickPower = data.click_power || 1;
         userData.nickname = data.nickname || firstName;
         userData.nicknameColor = data.nickname_color || '#9b59b6';
+        userData.stats.today = data.stats_today || 0;
+        userData.stats.total = data.stats_total || 0;
+        userData.stats.clicks = data.stats_clicks || 0;
         
         // Обновляем текущую страницу
         const activePage = document.querySelector('.nav-item.active').dataset.page;
         loadPage(activePage);
+        
     } catch (error) {
         console.error('Error loading user data:', error);
+        // В демо-режиме продолжаем с локальными данными
     }
 }
 
 // Обновление баланса
 async function updateBalance(amount) {
-    if (!userId) return false;
+    if (!userId) {
+        // Демо-режим
+        userData.balance += amount;
+        userData.stats.today += amount;
+        userData.stats.total += amount;
+        return true;
+    }
 
     try {
         const response = await fetch(`${API_URL}/api/update-balance`, {
@@ -109,10 +130,8 @@ async function updateBalance(amount) {
         
         const data = await response.json();
         userData.balance = data.newBalance;
-        userData.stats.today += amount;
-        userData.stats.total += amount;
-        
         return true;
+        
     } catch (error) {
         console.error('Error updating balance:', error);
         return false;
@@ -134,15 +153,14 @@ function showNotification(text, isError = false) {
 
 // Инициализация
 if (userId) {
+    console.log('Initializing app for user:', userId);
     loadUserData();
-    // Загружаем главную страницу
     navigateTo('home');
     
-    // Обновляем данные каждые 10 секунд
-    setInterval(loadUserData, 10000);
+    // Обновляем данные каждые 5 секунд
+    setInterval(loadUserData, 5000);
 } else {
-    // Демо-режим
-    userData.nickname = 'Демо-пользователь';
+    console.log('Demo mode - no Telegram user');
     navigateTo('home');
 }
 
@@ -152,8 +170,8 @@ window.app = {
     username,
     firstName,
     userData,
+    API_URL,
     loadUserData,
     updateBalance,
-    showNotification,
-    API_URL
+    showNotification
 };
